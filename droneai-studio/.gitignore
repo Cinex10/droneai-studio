@@ -23,5 +23,8 @@ dist-ssr
 *.sln
 *.sw?
 
+# Rust build artifacts
+src-tauri/target/
+
 # Bundled Blender runtime (built by scripts/prepare-blender.sh)
 src-tauri/blender-runtime/
