@@ -35,6 +35,7 @@ fn dev_resolve(resource_name: &str) -> PathBuf {
         "blender_startup.py" => m.join("../blender_startup.py"),
         "mcp_config.json" => m.join("../mcp_config.json"),
         "system_prompt.md" => m.join("../resources/system_prompt.md"),
+        "droneai" => m.join("../resources/droneai"),
         other => m.join(other),
     }
 }
@@ -117,7 +118,14 @@ pub fn launch_blender(
         .ok()
         .and_then(|p| p.to_str().map(String::from));
 
-    blender.launch(&app, script_path, addon_dir.as_deref())
+    // Resolve droneai library parent dir so `import droneai` works in Blender.
+    // In production, droneai is in Blender's site-packages (no PYTHONPATH needed).
+    // In dev, it's under resources/ next to the startup script.
+    let droneai_lib_dir = resolve_resource(&app, "droneai")
+        .ok()
+        .and_then(|p| p.parent().map(|p| p.to_str().map(String::from)).flatten());
+
+    blender.launch(&app, script_path, addon_dir.as_deref(), droneai_lib_dir.as_deref())
 }
 
 #[tauri::command]
@@ -300,6 +308,9 @@ pub fn get_scene_data() -> Result<String, String> {
 /// A pre-built drone show for quick testing: 25 drones, 4 formations,
 /// color transitions.  Triggered by the /test command in the chat input.
 /// Uses the droneai library for all formation generation and Blender scripting.
+///
+/// NOTE: The `sys.path` preamble is prepended dynamically by `run_test_show()`
+/// so this script only contains the actual show logic.
 const TEST_SHOW_SCRIPT: &str = r#"
 import bpy
 from droneai.blender_scripts.setup_scene import setup_drone_show_scene
@@ -359,10 +370,27 @@ print(f"Test show created: {N} drones, {frame} frames ({frame/FPS:.1f}s)")
 "#;
 
 #[tauri::command]
-pub fn run_test_show() -> Result<String, String> {
+pub fn run_test_show(app: tauri::AppHandle) -> Result<String, String> {
+    // Resolve droneai library path and prepend sys.path setup to the script.
+    // Blender's embedded Python may ignore PYTHONPATH, so we inject the path
+    // directly into the executed code.
+    let preamble = if let Ok(droneai_dir) = resolve_resource(&app, "droneai") {
+        if let Some(parent) = droneai_dir.parent() {
+            format!(
+                "import sys; sys.path.insert(0, r'{}')\n",
+                parent.display()
+            )
+        } else {
+            String::new()
+        }
+    } else {
+        String::new()
+    };
+
+    let full_script = format!("{}{}", preamble, TEST_SHOW_SCRIPT);
     let payload = serde_json::json!({
         "type": "execute_code",
-        "params": { "code": TEST_SHOW_SCRIPT }
+        "params": { "code": full_script }
     });
     let resp = blender_mcp_call(&payload)?;
 

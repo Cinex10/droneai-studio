@@ -26,5 +26,8 @@ dist-ssr
 # Rust build artifacts
 src-tauri/target/
 
+# Python cache
+__pycache__/
+
 # Bundled Blender runtime (built by scripts/prepare-blender.sh)
 src-tauri/blender-runtime/

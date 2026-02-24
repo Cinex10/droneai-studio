@@ -66,6 +66,7 @@ impl BlenderProcess {
         app: &tauri::AppHandle,
         startup_script: &str,
         addon_dir: Option<&str>,
+        droneai_lib_dir: Option<&str>,
     ) -> Result<u32, String> {
         // Kill any existing Blender process first — Rust's Child::drop does NOT
         // kill the subprocess, so without this, zombie Blender processes accumulate
@@ -82,6 +83,12 @@ impl BlenderProcess {
         // Point Blender at the bundled addon directory
         if let Some(dir) = addon_dir {
             cmd.env("BLENDER_USER_SCRIPTS", dir);
+        }
+
+        // Add droneai library to Python path so `import droneai` works
+        // inside Blender's exec() calls (MCP addon execute_code).
+        if let Some(lib_dir) = droneai_lib_dir {
+            cmd.env("PYTHONPATH", lib_dir);
         }
 
         // Discard stdout/stderr — piped-but-unread pipes fill up and block
