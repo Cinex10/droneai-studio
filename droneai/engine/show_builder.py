@@ -18,10 +18,16 @@ from typing import List, Tuple
 
 from droneai.engine.show_spec import ShowSpec, FormationSpec
 from droneai.engine.formations.parametric import ParametricFormation
-from droneai.engine.transitions.hungarian import HungarianPlanner
 from droneai.engine.formations.spacing import RepulsionEnforcer
 from droneai.engine.safety.base import SafetyParams, SafetyResult, ShowTimeline, Position
 from droneai.engine.safety.standard import StandardValidator
+
+try:
+    from droneai.engine.transitions.hungarian import HungarianPlanner
+    _default_planner = HungarianPlanner
+except ImportError:
+    from droneai.engine.transitions.linear import LinearPlanner
+    _default_planner = LinearPlanner
 
 
 @dataclass
@@ -44,7 +50,7 @@ class ShowBuilder:
         min_spacing: float = 2.0,
     ):
         self.formation_gen = ParametricFormation()
-        self.planner = HungarianPlanner()
+        self.planner = _default_planner()
         self.enforcer = RepulsionEnforcer()
         self.validator = StandardValidator()
         self.safety_params = safety_params or SafetyParams()
