@@ -1,6 +1,6 @@
 # /// script
 # requires-python = ">=3.11"
-# dependencies = ["mcp"]
+# dependencies = ["mcp", "scipy"]
 # ///
 """DroneAI MCP Server — lightweight bridge between Claude Code and Blender.
 
@@ -107,16 +107,18 @@ mcp = FastMCP("droneai-blender", instructions="Control Blender for drone show de
 _SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 _RESOURCES_DIR = os.path.normpath(os.path.join(_SCRIPT_DIR, "..", "resources"))
 
+# Make droneai importable in the MCP server process itself.
+# The engine is pure Python (no Blender dependency) — it runs here, not in Blender.
+sys.path.insert(0, _RESOURCES_DIR)
+from droneai.engine.show_spec import ShowSpec  # noqa: E402
+from droneai.engine.show_builder import ShowBuilder, BuildResult  # noqa: E402
+
 # Preamble injected into every execute_blender_code call to ensure
 # `import droneai` works. Blender's embedded Python often ignores PYTHONPATH.
-# Also clears cached droneai modules so re-imports use this path, not a
-# stale version loaded by the Blender startup script.
 _SYS_PATH_PREAMBLE = (
     f"import sys as __sys; "
     f"__p = r'{_RESOURCES_DIR}'; "
-    f"__p in __sys.path and __sys.path.remove(__p); "
-    f"__sys.path.insert(0, __p); "
-    f"[__sys.modules.pop(__k, None) for __k in list(__sys.modules) if __k == 'droneai' or __k.startswith('droneai.')]\n"
+    f"__p in __sys.path or __sys.path.insert(0, __p)\n"
 )
 
 
@@ -195,9 +197,217 @@ def get_viewport_screenshot(max_size: int = 800) -> Image:
         raise Exception(f"Screenshot failed: {e}")
 
 
+# ---------------------------------------------------------------------------
+# Blender rendering script template
+# ---------------------------------------------------------------------------
+# This script runs inside Blender's Python. It reads show data from a _DATA
+# dict that is embedded at the top by _generate_blender_script(). It uses
+# ONLY bpy/bmesh — zero droneai imports, so there are no path or dependency
+# issues in Blender's environment.
+
+_RENDER_SCRIPT_BODY = '''
+fps = _DATA["fps"]
+drone_count = _DATA["drone_count"]
+formations = _DATA["formations"]
+frames = _DATA["frames"]
+colors = _DATA["colors"]
+easings = _DATA["easings"]
+
+# --- Clear scene ---
+for obj in list(bpy.data.objects):
+    bpy.data.objects.remove(obj, do_unlink=True)
+for block in list(bpy.data.meshes):
+    if block.users == 0:
+        bpy.data.meshes.remove(block)
+for block in list(bpy.data.materials):
+    if block.users == 0:
+        bpy.data.materials.remove(block)
+
+scene = bpy.context.scene
+scene.render.fps = fps
+scene.frame_start = 0
+scene.frame_end = frames[-1]
+scene.frame_current = 0
+
+# Dark background
+world = bpy.data.worlds.get("World")
+if world is None:
+    world = bpy.data.worlds.new("World")
+scene.world = world
+world.use_nodes = True
+bg_node = world.node_tree.nodes.get("Background")
+if bg_node:
+    bg_node.inputs[0].default_value = (0.01, 0.01, 0.02, 1.0)
+
+# Ground plane (mesh API, no bpy.ops)
+gnd_mesh = bpy.data.meshes.new("Ground_Mesh")
+gnd_mesh.from_pydata(
+    [(-50, -50, 0), (50, -50, 0), (50, 50, 0), (-50, 50, 0)], [], [(0, 1, 2, 3)]
+)
+gnd_obj = bpy.data.objects.new("Ground", gnd_mesh)
+scene.collection.objects.link(gnd_obj)
+gnd_mat = bpy.data.materials.new("Ground_Material")
+gnd_mat.diffuse_color = (0.1, 0.15, 0.1, 1.0)
+gnd_obj.data.materials.append(gnd_mat)
+
+# --- Create drones ---
+drone_coll = bpy.data.collections.new("Drones")
+scene.collection.children.link(drone_coll)
+
+# Shared sphere mesh via bmesh (no bpy.ops needed)
+bm = bmesh.new()
+bmesh.ops.create_uvsphere(bm, u_segments=8, v_segments=6, radius=0.15)
+template_mesh = bpy.data.meshes.new("Drone_Mesh")
+bm.to_mesh(template_mesh)
+bm.free()
+
+drone_objs = []
+for i in range(drone_count):
+    name = f"Drone_{i + 1:03d}"
+    obj = bpy.data.objects.new(name, template_mesh.copy())
+    drone_coll.objects.link(obj)
+    p = formations[0][i]
+    obj.location = (p[0], p[1], p[2])
+
+    # Emissive material (LED)
+    mat = bpy.data.materials.new(f"LED_{i + 1:03d}")
+    mat.use_nodes = True
+    nodes = mat.node_tree.nodes
+    links = mat.node_tree.links
+    for n in list(nodes):
+        nodes.remove(n)
+    em = nodes.new("ShaderNodeEmission")
+    em.inputs["Color"].default_value = (1.0, 1.0, 1.0, 1.0)
+    em.inputs["Strength"].default_value = 5.0
+    out = nodes.new("ShaderNodeOutputMaterial")
+    links.new(em.outputs["Emission"], out.inputs["Surface"])
+    obj.data.materials.append(mat)
+    drone_objs.append(obj)
+
+# --- Keyframe positions & colors ---
+for entry_idx in range(len(formations)):
+    pos_list = formations[entry_idx]
+    frame = frames[entry_idx]
+    color_spec = colors[entry_idx]
+
+    # Keyframe positions
+    for di, drone in enumerate(drone_objs):
+        p = pos_list[di]
+        drone.location = (p[0], p[1], p[2])
+        drone.keyframe_insert(data_path="location", frame=frame)
+
+    # Keyframe colors
+    if color_spec["type"] == "solid":
+        c = color_spec["value"]
+        for drone in drone_objs:
+            for node in drone.data.materials[0].node_tree.nodes:
+                if node.type == "EMISSION":
+                    node.inputs["Color"].default_value = (c[0], c[1], c[2], 1.0)
+                    node.inputs["Color"].keyframe_insert(
+                        data_path="default_value", frame=frame
+                    )
+                    break
+
+    elif color_spec["type"] == "gradient":
+        ax = {"x": 0, "y": 1, "z": 2}[color_spec.get("axis", "x")]
+        sc, ec = color_spec["start"], color_spec["end"]
+        vals = [pos_list[j][ax] for j in range(len(drone_objs))]
+        lo, hi = min(vals), max(vals)
+        span = hi - lo if hi > lo else 1.0
+        for di, drone in enumerate(drone_objs):
+            t = (pos_list[di][ax] - lo) / span
+            c = (
+                sc[0] + t * (ec[0] - sc[0]),
+                sc[1] + t * (ec[1] - sc[1]),
+                sc[2] + t * (ec[2] - sc[2]),
+            )
+            for node in drone.data.materials[0].node_tree.nodes:
+                if node.type == "EMISSION":
+                    node.inputs["Color"].default_value = (c[0], c[1], c[2], 1.0)
+                    node.inputs["Color"].keyframe_insert(
+                        data_path="default_value", frame=frame
+                    )
+                    break
+
+# --- Transition interpolation ---
+interp_map = {
+    "LINEAR": "LINEAR",
+    "EASE_IN_OUT": "BEZIER",
+    "EASE_IN": "BEZIER",
+    "EASE_OUT": "BEZIER",
+}
+for i in range(len(easings)):
+    easing = easings[i]
+    f_start, f_end = frames[i], frames[i + 1]
+    interp = interp_map.get(easing, "BEZIER")
+    for drone in drone_objs:
+        if not drone.animation_data or not drone.animation_data.action:
+            continue
+        for fcurve in drone.animation_data.action.fcurves:
+            if fcurve.data_path != "location":
+                continue
+            for kp in fcurve.keyframe_points:
+                if f_start <= kp.co[0] <= f_end:
+                    kp.interpolation = interp
+                    if easing == "EASE_IN_OUT":
+                        kp.easing = "AUTO"
+                    elif easing == "EASE_IN":
+                        kp.easing = "EASE_IN"
+                    elif easing == "EASE_OUT":
+                        kp.easing = "EASE_OUT"
+
+scene.frame_set(0)
+summary = (
+    f"Show rendered: {drone_count} drones, "
+    f"{len(formations)} formations, "
+    f"{frames[-1]} frames ({frames[-1] / fps:.1f}s)"
+)
+print(json.dumps({"status": "ok", "summary": summary}))
+'''
+
+
+def _generate_blender_script(result: BuildResult) -> str:
+    """Generate a self-contained bpy script from a BuildResult.
+
+    All show data is embedded as Python literals — zero droneai imports
+    in Blender. This eliminates all path/dependency issues.
+    """
+    spec = result.spec
+
+    # Round positions to 4 decimals to keep the script compact
+    formations_data = [
+        [tuple(round(c, 4) for c in pos) for pos in formation]
+        for formation in result.formations
+    ]
+
+    color_data = [entry.color.to_dict() for entry in spec.timeline]
+
+    easings = []
+    for i in range(1, len(spec.timeline)):
+        entry = spec.timeline[i]
+        easings.append(
+            entry.transition.easing.upper().replace("-", "_")
+            if entry.transition
+            else "EASE_IN_OUT"
+        )
+
+    data_dict = {
+        "fps": spec.fps,
+        "drone_count": spec.drone_count,
+        "formations": formations_data,
+        "frames": result.frames,
+        "colors": color_data,
+        "easings": easings,
+    }
+
+    script = "import bpy, json, bmesh\n"
+    script += f"_DATA = {repr(data_dict)}\n"
+    script += _RENDER_SCRIPT_BODY
+    return script
+
+
 # --- Show state (persisted in memory for the session) ---
 _current_spec: dict | None = None
-_current_build_result_json: str | None = None
 
 
 @mcp.tool()
@@ -222,81 +432,61 @@ def build_show(spec: str) -> str:
                 ]
             }
     """
-    global _current_spec, _current_build_result_json
+    global _current_spec
     try:
-        import json as _json
-        import base64
+        # 1. Parse and validate spec locally (in MCP server process)
+        spec_dict = json.loads(spec)
+        show_spec = ShowSpec.from_dict(spec_dict)
 
-        # Parse and validate spec (basic check before sending to Blender)
-        spec_dict = _json.loads(spec)
+        # 2. Run the build pipeline locally (pure Python, no Blender needed)
+        builder = ShowBuilder()
+        result = builder.build(show_spec)
 
-        # Encode the spec as base64 to avoid string escaping issues
-        spec_b64 = base64.b64encode(spec.encode()).decode()
+        if not result.is_safe:
+            violations = "; ".join(result.safety_report.violations[:10])
+            return (
+                f"Safety validation FAILED:\n{violations}\n\n"
+                f"Adjust the spec and try again."
+            )
 
-        # Build + validate + render inside Blender where droneai is available
-        build_code = _SYS_PATH_PREAMBLE + f"""
-import json
-import base64
-import traceback
+        # 3. Generate a self-contained bpy script with embedded data
+        blender_script = _generate_blender_script(result)
 
-try:
-    spec_json = base64.b64decode('{spec_b64}').decode()
-
-    from droneai.engine.show_spec import ShowSpec
-    from droneai.engine.show_builder import ShowBuilder
-    from droneai.engine.show_renderer import render_to_blender
-
-    spec = ShowSpec.from_json(spec_json)
-    builder = ShowBuilder()
-    result = builder.build(spec)
-
-    if not result.is_safe:
-        violations = "; ".join(result.safety_report.violations[:10])
-        print(json.dumps({{"safe": False, "violations": violations}}))
-    else:
-        summary = render_to_blender(result)
-        report = {{
-            "safe": True,
-            "summary": summary,
-            "min_spacing": round(result.safety_report.min_spacing_found, 2),
-            "max_velocity": round(result.safety_report.max_velocity_found, 2),
-            "max_altitude": round(result.safety_report.max_altitude_found, 2),
-        }}
-        print(json.dumps(report))
-except Exception as __e:
-    print(json.dumps({{"safe": False, "error": str(__e), "traceback": traceback.format_exc()}}))
-"""
-        resp = _send_command("execute_code", {"code": build_code})
+        # 4. Send ONLY the rendering script to Blender (no droneai imports)
+        resp = _send_command("execute_code", {"code": blender_script})
 
         if resp.get("status") == "error":
-            return f"Error: {resp.get('message', 'Unknown error')}"
+            return f"Error rendering in Blender: {resp.get('message', 'Unknown error')}"
 
+        # Check for errors in Blender's output
         result_str = resp.get("result", {}).get("result", "")
-        if not result_str.strip():
-            return f"Error: No output from build pipeline. Response: {resp}"
+        if result_str.strip():
+            try:
+                render_result = json.loads(result_str.strip())
+                if render_result.get("status") == "error":
+                    return (
+                        f"Error rendering in Blender: {render_result.get('message', 'Unknown')}\n\n"
+                        f"Traceback:\n{render_result.get('traceback', 'N/A')}"
+                    )
+            except json.JSONDecodeError:
+                pass  # Non-JSON output is fine
 
-        result_data = _json.loads(result_str.strip())
-
-        if result_data.get("error"):
-            return f"Error in Blender: {result_data['error']}\n\nTraceback:\n{result_data.get('traceback', 'N/A')}"
-
-        if not result_data.get("safe"):
-            return f"Safety validation FAILED:\n{result_data.get('violations', 'Unknown')}\n\nAdjust the spec and try again."
-
-        # Store spec for update_show
+        # 5. Store spec for update_show
         _current_spec = spec_dict
-        _current_build_result_json = result_str.strip()
 
-        report = result_data
         return (
             f"Show built successfully!\n\n"
-            f"{report.get('summary', '')}\n\n"
+            f"Show rendered: {show_spec.drone_count} drones, "
+            f"{len(show_spec.timeline)} formations, "
+            f"{result.frames[-1]} frames ({result.frames[-1] / show_spec.fps:.1f}s)\n\n"
             f"Safety report:\n"
-            f"  Min spacing: {report.get('min_spacing', '?')}m (safe >= 2.0m)\n"
-            f"  Max velocity: {report.get('max_velocity', '?')} m/s (safe <= 8.0 m/s)\n"
-            f"  Max altitude: {report.get('max_altitude', '?')}m (safe <= 120m)"
+            f"  Min spacing: {round(result.safety_report.min_spacing_found, 2)}m (safe >= 2.0m)\n"
+            f"  Max velocity: {round(result.safety_report.max_velocity_found, 2)} m/s (safe <= 8.0 m/s)\n"
+            f"  Max altitude: {round(result.safety_report.max_altitude_found, 2)}m (safe <= 120m)"
         )
 
+    except ValueError as e:
+        return f"Invalid spec: {e}"
     except Exception as e:
         return f"Error building show: {e}"
 
@@ -321,10 +511,9 @@ def update_show(changes: str) -> str:
         return "Error: No current show. Use build_show first."
 
     try:
-        import json as _json
         import copy
 
-        changes_data = _json.loads(changes)
+        changes_data = json.loads(changes)
         spec = copy.deepcopy(_current_spec)
         timeline = spec["timeline"]
 
@@ -363,7 +552,7 @@ def update_show(changes: str) -> str:
                 timeline.sort(key=lambda e: e["time"])
 
         # Re-build with patched spec
-        return build_show(_json.dumps(spec))
+        return build_show(json.dumps(spec))
 
     except Exception as e:
         return f"Error updating show: {e}"
