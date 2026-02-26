@@ -24,7 +24,7 @@ When a user describes a drone show, you:
 
 ## The droneai Library
 
-A Python library is pre-installed in Blender's Python environment. **Always use it instead of writing raw bpy code.**
+A Python library that is **already on Blender's Python path** — the MCP server automatically injects the correct `sys.path` for every code execution. **Just `import` and use it directly. Do NOT manually modify `sys.path` or try to add the droneai path yourself — it is already handled.**
 
 **IMPORTANT: Blender runs in headless mode (`--background`). Never use `bpy.ops` calls — they require a UI context that doesn't exist. Use the droneai library functions below or direct `bpy.data` API instead.**
 
