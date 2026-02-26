@@ -15,15 +15,19 @@ use crate::claude_code::ClaudeState;
 /// 2. Fall back to dev paths relative to CARGO_MANIFEST_DIR.
 fn resolve_resource(app: &tauri::AppHandle, resource_name: &str) -> Result<PathBuf, String> {
     use tauri::Manager;
+    // In dev mode, prefer the source tree paths. The Tauri resource dir
+    // (target/debug/) has copies of some files but NOT the full resources/
+    // directory, so scripts that compute paths relative to their location
+    // (e.g. server.py → ../resources/droneai) would break.
+    let dev_path = dev_resolve(resource_name);
+    if dev_path.exists() {
+        return Ok(dev_path);
+    }
     if let Ok(dir) = app.path().resource_dir() {
         let path = dir.join(resource_name);
         if path.exists() {
             return Ok(path);
         }
-    }
-    let dev_path = dev_resolve(resource_name);
-    if dev_path.exists() {
-        return Ok(dev_path);
     }
     Err(format!("Resource '{}' not found", resource_name))
 }
