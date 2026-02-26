@@ -79,5 +79,6 @@ def create_drones(count, start_positions=None, spacing=2.0):
     return drone_names
 
 
-# Execute — replace count as needed
-create_drones(count=50)
+# Execute (only when run as standalone script, not on import)
+if __name__ == "__main__":
+    create_drones(count=50)

@@ -58,5 +58,6 @@ def setup_drone_show_scene(fps=24, duration_seconds=60):
     print(f"Scene ready: {fps}fps, {duration_seconds}s, {scene.frame_end} frames")
 
 
-# Execute
-setup_drone_show_scene()
+# Execute (only when run as standalone script, not on import)
+if __name__ == "__main__":
+    setup_drone_show_scene()

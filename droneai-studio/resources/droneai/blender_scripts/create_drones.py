@@ -1,10 +1,10 @@
 """Create drone objects in Blender scene.
 
-Works in both GUI and headless (--background) mode by using
-bmesh + data API instead of bpy.ops operators.
+Execute in Blender via MCP execute_blender_code.
+Creates N drone objects as small spheres with emissive materials.
 """
 import bpy
-import math
+import mathutils
 
 
 def create_drones(count, start_positions=None, spacing=2.0):
@@ -19,6 +19,8 @@ def create_drones(count, start_positions=None, spacing=2.0):
     Returns:
         List of created drone object names.
     """
+    import math
+
     # Get or create Drones collection
     if "Drones" not in bpy.data.collections:
         drone_collection = bpy.data.collections.new("Drones")
@@ -36,23 +38,21 @@ def create_drones(count, start_positions=None, spacing=2.0):
             y = (row - (cols - 1) / 2) * spacing
             start_positions.append((x, y, 0.0))
 
-    # Create a shared low-poly sphere mesh using bmesh (headless-compatible)
-    import bmesh
-    bm = bmesh.new()
-    bmesh.ops.create_uvsphere(bm, u_segments=16, v_segments=8, radius=0.15)
-    template_mesh = bpy.data.meshes.new("DroneMesh")
-    bm.to_mesh(template_mesh)
-    bm.free()
+    # Create a shared mesh for all drones (small sphere)
+    bpy.ops.mesh.primitive_uv_sphere_add(radius=0.15, segments=8, ring_count=6)
+    template = bpy.context.active_object
+    template_mesh = template.data
+    bpy.data.objects.remove(template, do_unlink=True)
 
     drone_names = []
     for i in range(count):
-        # Create drone object with its own mesh copy
+        # Create drone object
         drone = bpy.data.objects.new(f"Drone_{i+1:03d}", template_mesh.copy())
         drone_collection.objects.link(drone)
 
         # Set position
         pos = start_positions[i] if i < len(start_positions) else (0, 0, 0)
-        drone.location = pos
+        drone.location = mathutils.Vector(pos)
 
         # Create emissive material (LED simulation)
         mat = bpy.data.materials.new(f"LED_{i+1:03d}")
@@ -61,12 +61,12 @@ def create_drones(count, start_positions=None, spacing=2.0):
         links = mat.node_tree.links
 
         # Clear default nodes
-        for node in list(nodes):
+        for node in nodes:
             nodes.remove(node)
 
         # Add emission shader
         emission = nodes.new("ShaderNodeEmission")
-        emission.inputs["Color"].default_value = (1.0, 1.0, 1.0, 1.0)
+        emission.inputs["Color"].default_value = (1.0, 1.0, 1.0, 1.0)  # white default
         emission.inputs["Strength"].default_value = 5.0
 
         output = nodes.new("ShaderNodeOutputMaterial")
@@ -77,3 +77,8 @@ def create_drones(count, start_positions=None, spacing=2.0):
 
     print(f"Created {count} drones: {drone_names[0]} to {drone_names[-1]}")
     return drone_names
+
+
+# Execute (only when run as standalone script, not on import)
+if __name__ == "__main__":
+    create_drones(count=50)

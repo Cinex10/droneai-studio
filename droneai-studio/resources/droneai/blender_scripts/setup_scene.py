@@ -1,7 +1,7 @@
 """Setup a clean Blender scene for drone show design.
 
-Works in both GUI and headless (--background) mode by using
-data-level API instead of bpy.ops operators.
+Execute in Blender via MCP execute_blender_code.
+Clears existing objects and configures the scene.
 """
 import bpy
 
@@ -13,9 +13,9 @@ def setup_drone_show_scene(fps=24, duration_seconds=60):
         fps: Frames per second for the animation.
         duration_seconds: Total show duration.
     """
-    # Remove all existing objects using data API (no bpy.ops needed)
-    for obj in list(bpy.data.objects):
-        bpy.data.objects.remove(obj, do_unlink=True)
+    # Clear existing objects
+    bpy.ops.object.select_all(action='SELECT')
+    bpy.ops.object.delete(use_global=False)
 
     # Clear orphan data
     for block in bpy.data.meshes:
@@ -40,18 +40,12 @@ def setup_drone_show_scene(fps=24, duration_seconds=60):
     world.use_nodes = True
     bg = world.node_tree.nodes.get("Background")
     if bg:
-        bg.inputs[0].default_value = (0.01, 0.01, 0.02, 1.0)
+        bg.inputs[0].default_value = (0.01, 0.01, 0.02, 1.0)  # near black
 
-    # Create ground plane using data API (no bpy.ops)
-    import bmesh
-    bm = bmesh.new()
-    bmesh.ops.create_grid(bm, x_segments=1, y_segments=1, size=50.0)
-    ground_mesh = bpy.data.meshes.new("GroundMesh")
-    bm.to_mesh(ground_mesh)
-    bm.free()
-
-    ground = bpy.data.objects.new("Ground", ground_mesh)
-    scene.collection.objects.link(ground)
+    # Create ground plane (optional reference)
+    bpy.ops.mesh.primitive_plane_add(size=100, location=(0, 0, 0))
+    ground = bpy.context.active_object
+    ground.name = "Ground"
     mat = bpy.data.materials.new("Ground_Material")
     mat.diffuse_color = (0.1, 0.15, 0.1, 1.0)
     ground.data.materials.append(mat)
@@ -62,3 +56,8 @@ def setup_drone_show_scene(fps=24, duration_seconds=60):
         scene.collection.children.link(drone_collection)
 
     print(f"Scene ready: {fps}fps, {duration_seconds}s, {scene.frame_end} frames")
+
+
+# Execute (only when run as standalone script, not on import)
+if __name__ == "__main__":
+    setup_drone_show_scene()
