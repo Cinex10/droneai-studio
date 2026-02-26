@@ -99,7 +99,7 @@ Claude Code is spawned with flags: `--print --system-prompt <path> --input-forma
 
 MCP config is generated at runtime by `commands.rs::new_chat()` with the resolved absolute path to `mcp-server/server.py`.
 
-System prompt: `droneai/system_prompt.md` (also copied to `droneai-studio/resources/system_prompt.md`)
+System prompt: `droneai-studio/resources/system_prompt.md`
 
 ## MCP Server (droneai-studio/mcp-server/)
 
