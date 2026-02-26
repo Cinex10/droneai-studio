@@ -60,6 +60,33 @@ impl BlenderProcess {
         None
     }
 
+    /// Kill any orphaned Blender processes from previous app sessions.
+    ///
+    /// When the app crashes or is force-quit, `Drop` doesn't fire and the
+    /// headless Blender (which runs an infinite sleep loop) survives.  These
+    /// zombies hold port 9876 and serve stale scene data to the next launch.
+    fn kill_orphaned_blenders() {
+        // Find all headless Blender processes launched by our startup script
+        let output = Command::new("pgrep")
+            .args(["-f", "Blender --background --addons addon --python"])
+            .output();
+
+        if let Ok(output) = output {
+            let pids = String::from_utf8_lossy(&output.stdout);
+            for line in pids.lines() {
+                if let Ok(pid) = line.trim().parse::<i32>() {
+                    unsafe {
+                        libc::kill(pid, libc::SIGTERM);
+                    }
+                }
+            }
+            // Give them a moment to exit gracefully
+            if !pids.trim().is_empty() {
+                std::thread::sleep(std::time::Duration::from_millis(500));
+            }
+        }
+    }
+
     /// Launch Blender headless with the startup script and optional addon directory.
     pub fn launch(
         &mut self,
@@ -68,10 +95,11 @@ impl BlenderProcess {
         addon_dir: Option<&str>,
         droneai_lib_dir: Option<&str>,
     ) -> Result<u32, String> {
-        // Kill any existing Blender process first — Rust's Child::drop does NOT
-        // kill the subprocess, so without this, zombie Blender processes accumulate
-        // across app restarts and fight over port 9876.
+        // Kill tracked child from this session
         self.kill();
+        // Also kill orphaned Blender processes from previous sessions that
+        // may still hold port 9876 and serve stale scene data.
+        Self::kill_orphaned_blenders();
 
         let blender_path = Self::detect_blender_path(app)
             .ok_or_else(|| "Blender not found. Please install Blender 4.x or run scripts/prepare-blender.sh.".to_string())?;

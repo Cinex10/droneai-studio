@@ -784,6 +784,7 @@ name = "droneai-studio"
 version = "0.1.0"
 dependencies = [
  "cocoa",
+ "libc",
  "objc",
  "serde",
  "serde_json",
