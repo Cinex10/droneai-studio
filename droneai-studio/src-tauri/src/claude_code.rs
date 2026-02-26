@@ -48,6 +48,8 @@ impl ClaudeSession {
                     "mcp__blender__get_scene_info",
                     "mcp__blender__get_object_info",
                     "mcp__blender__get_viewport_screenshot",
+                    "mcp__blender__build_show",
+                    "mcp__blender__update_show",
                 "--dangerously-skip-permissions",
                 "--no-session-persistence",
             ])

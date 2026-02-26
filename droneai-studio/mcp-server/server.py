@@ -191,6 +191,173 @@ def get_viewport_screenshot(max_size: int = 800) -> Image:
         raise Exception(f"Screenshot failed: {e}")
 
 
+# --- Show state (persisted in memory for the session) ---
+_current_spec: dict | None = None
+_current_build_result_json: str | None = None
+
+
+@mcp.tool()
+def build_show(spec: str) -> str:
+    """Build a drone show from a declarative spec. The spec describes formations,
+    timing, and colors. The engine validates safety before rendering to Blender.
+
+    Parameters:
+        spec: JSON string with the show spec. Format:
+            {
+                "drone_count": int,
+                "fps": int (default 24),
+                "timeline": [
+                    {
+                        "time": float (seconds),
+                        "formation": {"type": "parametric", "shape": "grid", "params": {...}}
+                                  or {"type": "positions", "positions": [[x,y,z], ...]},
+                        "color": {"type": "solid", "value": [r,g,b]}
+                              or {"type": "gradient", "start": [r,g,b], "end": [r,g,b], "axis": "x"},
+                        "transition": {"easing": "ease_in_out"} (optional, absent on first entry)
+                    }
+                ]
+            }
+    """
+    global _current_spec, _current_build_result_json
+    try:
+        import json as _json
+        import base64
+
+        # Parse and validate spec (basic check before sending to Blender)
+        spec_dict = _json.loads(spec)
+
+        # Encode the spec as base64 to avoid string escaping issues
+        spec_b64 = base64.b64encode(spec.encode()).decode()
+
+        # Build + validate + render inside Blender where droneai is available
+        build_code = _SYS_PATH_PREAMBLE + f"""
+import json
+import base64
+
+spec_json = base64.b64decode('{spec_b64}').decode()
+
+from droneai.engine.show_spec import ShowSpec
+from droneai.engine.show_builder import ShowBuilder
+from droneai.engine.show_renderer import render_to_blender
+
+spec = ShowSpec.from_json(spec_json)
+builder = ShowBuilder()
+result = builder.build(spec)
+
+if not result.is_safe:
+    violations = "; ".join(result.safety_report.violations[:10])
+    print(json.dumps({{"safe": False, "violations": violations}}))
+else:
+    summary = render_to_blender(result)
+    report = {{
+        "safe": True,
+        "summary": summary,
+        "min_spacing": round(result.safety_report.min_spacing_found, 2),
+        "max_velocity": round(result.safety_report.max_velocity_found, 2),
+        "max_altitude": round(result.safety_report.max_altitude_found, 2),
+    }}
+    print(json.dumps(report))
+"""
+        resp = _send_command("execute_code", {"code": build_code})
+
+        if resp.get("status") == "error":
+            return f"Error: {resp.get('message', 'Unknown error')}"
+
+        result_str = resp.get("result", {}).get("result", "")
+        if not result_str.strip():
+            return f"Error: No output from build pipeline. Response: {resp}"
+
+        result_data = _json.loads(result_str.strip())
+
+        if not result_data.get("safe"):
+            return f"Safety validation FAILED:\n{result_data.get('violations', 'Unknown')}\n\nAdjust the spec and try again."
+
+        # Store spec for update_show
+        _current_spec = spec_dict
+        _current_build_result_json = result_str.strip()
+
+        report = result_data
+        return (
+            f"Show built successfully!\n\n"
+            f"{report.get('summary', '')}\n\n"
+            f"Safety report:\n"
+            f"  Min spacing: {report.get('min_spacing', '?')}m (safe >= 2.0m)\n"
+            f"  Max velocity: {report.get('max_velocity', '?')} m/s (safe <= 8.0 m/s)\n"
+            f"  Max altitude: {report.get('max_altitude', '?')}m (safe <= 120m)"
+        )
+
+    except Exception as e:
+        return f"Error building show: {e}"
+
+
+@mcp.tool()
+def update_show(changes: str) -> str:
+    """Update the current show by patching the spec and re-rendering.
+
+    Parameters:
+        changes: JSON string with changes to apply:
+            {
+                "changes": [
+                    {"action": "update", "index": 0, "formation": {...}, "color": {...}},
+                    {"action": "add", "time": 5, "formation": {...}, "color": {...}},
+                    {"action": "remove", "index": 2}
+                ]
+            }
+            Fields in "update" are merged — only specified fields change.
+    """
+    global _current_spec
+    if _current_spec is None:
+        return "Error: No current show. Use build_show first."
+
+    try:
+        import json as _json
+        import copy
+
+        changes_data = _json.loads(changes)
+        spec = copy.deepcopy(_current_spec)
+        timeline = spec["timeline"]
+
+        for change in changes_data.get("changes", []):
+            action = change["action"]
+
+            if action == "remove":
+                idx = change["index"]
+                if 0 <= idx < len(timeline):
+                    timeline.pop(idx)
+
+            elif action == "update":
+                idx = change["index"]
+                if 0 <= idx < len(timeline):
+                    entry = timeline[idx]
+                    if "formation" in change:
+                        entry["formation"].update(change["formation"])
+                    if "color" in change:
+                        entry["color"].update(change["color"])
+                    if "time" in change:
+                        entry["time"] = change["time"]
+                    if "transition" in change:
+                        entry["transition"] = change["transition"]
+
+            elif action == "add":
+                new_entry = {
+                    "time": change["time"],
+                    "formation": change["formation"],
+                    "color": change["color"],
+                }
+                if "transition" in change:
+                    new_entry["transition"] = change["transition"]
+                else:
+                    new_entry["transition"] = {"easing": "ease_in_out"}
+                timeline.append(new_entry)
+                timeline.sort(key=lambda e: e["time"])
+
+        # Re-build with patched spec
+        return build_show(_json.dumps(spec))
+
+    except Exception as e:
+        return f"Error updating show: {e}"
+
+
 def main():
     global BLENDER_HOST, BLENDER_PORT
 
