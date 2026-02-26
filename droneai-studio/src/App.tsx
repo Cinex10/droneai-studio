@@ -19,7 +19,8 @@ function App() {
     {
       id: "welcome",
       role: "assistant",
-      content: "Welcome to DroneAI Studio! Describe a drone show and I'll build it for you.",
+      content:
+        "Welcome to DroneAI Studio! Tell me about the drone show you'd like to create, or just say the word and I'll design something for you.",
       timestamp: Date.now(),
     },
   ]);
@@ -95,6 +96,32 @@ function App() {
       console.error("Failed to reconnect:", e);
     }
   }, [claude]);
+
+  const handleSelection = async (machineText: string, displayText: string) => {
+    const userMsg: Message = {
+      id: crypto.randomUUID(),
+      role: "user",
+      content: displayText,
+      timestamp: Date.now(),
+    };
+    setMessages((prev) => [...prev, userMsg]);
+    setIsLoading(true);
+
+    try {
+      await claude.sendMessage(machineText);
+    } catch (e) {
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: crypto.randomUUID(),
+          role: "assistant",
+          content: `Error: ${e}`,
+          timestamp: Date.now(),
+        },
+      ]);
+      setIsLoading(false);
+    }
+  };
 
   const handleSendMessage = async (text: string) => {
     const userMsg: Message = {
@@ -174,9 +201,9 @@ function App() {
         <ChatPanel
           messages={messages}
           onSendMessage={handleSendMessage}
+          onSelect={handleSelection}
           isLoading={isLoading}
           isToolRunning={claude.isToolRunning}
-          currentTool={claude.currentTool}
         />
       </div>
       <div className="flex-1 flex flex-col">

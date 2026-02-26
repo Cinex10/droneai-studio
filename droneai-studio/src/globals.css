@@ -107,3 +107,137 @@ body {
 .prose-chat th {
   background: rgba(255, 255, 255, 0.05);
 }
+
+/* --- DroneAI structured block components --- */
+
+.droneai-card {
+  margin: 0.5em 0;
+}
+
+.droneai-card-text {
+  margin: 0 0 0.5em;
+  font-weight: 500;
+}
+
+.droneai-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5em;
+}
+
+.droneai-option {
+  padding: 0.4em 0.9em;
+  border-radius: 9999px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-primary);
+  font-size: 0.85em;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.droneai-option:hover:not(:disabled) {
+  border-color: var(--accent);
+  background: rgba(99, 102, 241, 0.1);
+}
+
+.droneai-option.selected {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: white;
+}
+
+.droneai-option.dimmed {
+  opacity: 0.35;
+}
+
+.droneai-option:disabled {
+  cursor: default;
+}
+
+.droneai-confirm {
+  margin-top: 0.5em;
+  padding: 0.35em 1em;
+  border-radius: 6px;
+  border: none;
+  background: var(--accent);
+  color: white;
+  font-size: 0.85em;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.droneai-confirm:hover:not(:disabled) {
+  background: var(--accent-hover);
+}
+
+.droneai-confirm:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+/* Timeline table */
+.droneai-timeline {
+  border-collapse: collapse;
+  margin: 0.5em 0;
+  font-size: 0.85em;
+  width: 100%;
+}
+
+.droneai-timeline th,
+.droneai-timeline td {
+  border: 1px solid var(--border);
+  padding: 0.3em 0.6em;
+  text-align: left;
+}
+
+.droneai-timeline th {
+  background: rgba(255, 255, 255, 0.05);
+  font-weight: 600;
+  font-size: 0.9em;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-secondary);
+}
+
+.droneai-timeline tr:nth-child(even) {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+/* Error card */
+.droneai-error {
+  display: flex;
+  gap: 0.6em;
+  align-items: flex-start;
+  margin: 0.5em 0;
+  padding: 0.6em 0.8em;
+  border-radius: 6px;
+  background: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+}
+
+.droneai-error-icon {
+  width: 1.4em;
+  height: 1.4em;
+  border-radius: 50%;
+  background: rgba(239, 68, 68, 0.2);
+  color: #ef4444;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75em;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.droneai-error-message {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 0.9em;
+}
+
+.droneai-error-suggestion {
+  margin: 0.25em 0 0;
+  color: var(--text-secondary);
+  font-size: 0.85em;
+}

@@ -11,17 +11,17 @@ interface Message {
 interface ChatPanelProps {
   messages: Message[];
   onSendMessage: (text: string) => void;
+  onSelect: (machineText: string, displayText: string) => void;
   isLoading: boolean;
   isToolRunning?: boolean;
-  currentTool?: string;
 }
 
 export default function ChatPanel({
   messages,
   onSendMessage,
+  onSelect,
   isLoading,
   isToolRunning,
-  currentTool,
 }: ChatPanelProps) {
   const [input, setInput] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -54,12 +54,17 @@ export default function ChatPanel({
       {/* Messages */}
       <div className="flex-1 overflow-y-auto px-4 py-3 space-y-4">
         {messages.map((msg) => (
-          <ChatMessage key={msg.id} message={msg} />
+          <ChatMessage
+            key={msg.id}
+            message={msg}
+            onSelect={onSelect}
+            interactionDisabled={isLoading}
+          />
         ))}
         {isToolRunning && (
           <div className="text-[var(--text-secondary)] text-xs flex items-center gap-2 py-1">
             <span className="inline-block w-2 h-2 bg-[var(--accent)] rounded-full animate-pulse" />
-            Using {currentTool}...
+            Building your show...
           </div>
         )}
         {isLoading && !isToolRunning && (
