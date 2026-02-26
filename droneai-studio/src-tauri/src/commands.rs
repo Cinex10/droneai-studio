@@ -34,6 +34,7 @@ fn dev_resolve(resource_name: &str) -> PathBuf {
     match resource_name {
         "blender_startup.py" => m.join("../blender_startup.py"),
         "mcp_config.json" => m.join("../mcp_config.json"),
+        "mcp-server/server.py" => m.join("../mcp-server/server.py"),
         "system_prompt.md" => m.join("../resources/system_prompt.md"),
         "droneai" => m.join("../resources/droneai"),
         other => m.join(other),
@@ -149,9 +150,29 @@ pub fn new_chat(
     let system_prompt = std::fs::read_to_string(&prompt_path)
         .map_err(|e| format!("Failed to read system prompt at {:?}: {}", prompt_path, e))?;
 
-    // Resolve MCP config path
-    let mcp_config = resolve_resource(&app, "mcp_config.json")?;
-    let mcp_config_str = mcp_config.to_str()
+    // Generate MCP config with absolute path to our MCP server
+    let server_script = resolve_resource(&app, "mcp-server/server.py")?;
+    let server_path = server_script.to_str()
+        .ok_or("Invalid MCP server script path")?;
+
+    let mcp_config = serde_json::json!({
+        "mcpServers": {
+            "blender": {
+                "command": "uv",
+                "args": ["run", server_path]
+            }
+        }
+    });
+
+    // Write to a temp file for Claude Code to read
+    let config_dir = std::env::temp_dir().join("droneai-studio");
+    std::fs::create_dir_all(&config_dir)
+        .map_err(|e| format!("Failed to create config dir: {}", e))?;
+    let config_path = config_dir.join("mcp_config.json");
+    std::fs::write(&config_path, mcp_config.to_string())
+        .map_err(|e| format!("Failed to write MCP config: {}", e))?;
+
+    let mcp_config_str = config_path.to_str()
         .ok_or("Invalid MCP config path")?;
 
     session.start(&system_prompt, mcp_config_str, app)

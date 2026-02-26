@@ -38,7 +38,7 @@
     "resources": {
       "blender-runtime/": "blender-runtime/",
       "../blender_startup.py": "blender_startup.py",
-      "../mcp_config.json": "mcp_config.json",
+      "../mcp-server/": "mcp-server/",
       "../resources/system_prompt.md": "system_prompt.md"
     }
   }
