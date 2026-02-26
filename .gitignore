@@ -1,2 +1,11 @@
 # Worktrees
 .worktrees/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# Generated show files
+*_show.json
+*_show_*.json
