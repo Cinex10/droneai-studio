@@ -1,12 +1,6 @@
 import { useState, useRef, useEffect } from "react";
+import type { Message } from "../types";
 import ChatMessage from "./ChatMessage";
-
-interface Message {
-  id: string;
-  role: "user" | "assistant";
-  content: string;
-  timestamp: number;
-}
 
 interface ChatPanelProps {
   messages: Message[];

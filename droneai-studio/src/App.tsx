@@ -1,18 +1,12 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { invoke } from "@tauri-apps/api/core";
+import type { Message } from "./types";
 import ChatPanel from "./components/ChatPanel";
 import DroneViewport from "./components/DroneViewport";
 import TimelineBar from "./components/TimelineBar";
 import SetupScreen from "./components/SetupScreen";
 import { useClaude } from "./hooks/useClaude";
 import { useSceneData } from "./hooks/useSceneData";
-
-interface Message {
-  id: string;
-  role: "user" | "assistant";
-  content: string;
-  timestamp: number;
-}
 
 function App() {
   const [messages, setMessages] = useState<Message[]>([

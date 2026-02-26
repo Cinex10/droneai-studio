@@ -1,17 +1,12 @@
+import { useMemo } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { parseContent, type Segment } from "../lib/droneaiBlocks";
+import type { Message } from "../types";
 import QuestionCard from "./QuestionCard";
 import SelectCard from "./SelectCard";
 import TimelineTable from "./TimelineTable";
 import ErrorCard from "./ErrorCard";
-
-interface Message {
-  id: string;
-  role: "user" | "assistant";
-  content: string;
-  timestamp: number;
-}
 
 interface ChatMessageProps {
   message: Message;
@@ -25,6 +20,10 @@ export default function ChatMessage({
   interactionDisabled,
 }: ChatMessageProps) {
   const isUser = message.role === "user";
+  const segments = useMemo(
+    () => (isUser ? [] : parseContent(message.content)),
+    [message.content, isUser]
+  );
 
   const handleQuestionSelect = (id: string, label: string) => {
     onSelect?.(`[selected: ${id}]`, label);
@@ -80,7 +79,7 @@ export default function ChatMessage({
           <div className="whitespace-pre-wrap">{message.content}</div>
         ) : (
           <div className="prose-chat">
-            {parseContent(message.content).map(renderSegment)}
+            {segments.map(renderSegment)}
           </div>
         )}
       </div>
