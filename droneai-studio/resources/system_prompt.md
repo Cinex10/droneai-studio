@@ -26,6 +26,8 @@ When a user describes a drone show, you:
 
 A Python library is pre-installed in Blender's Python environment. **Always use it instead of writing raw bpy code.**
 
+**IMPORTANT: Blender runs in headless mode (`--background`). Never use `bpy.ops` calls — they require a UI context that doesn't exist. Use the droneai library functions below or direct `bpy.data` API instead.**
+
 ### Formation Shapes
 
 ```python
