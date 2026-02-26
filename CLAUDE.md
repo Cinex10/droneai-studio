@@ -95,9 +95,20 @@ class Show:
 
 ## Claude Code Integration
 
-Claude Code is spawned with flags: `--print --system-prompt <path> --input-format stream-json --output-format stream-json --mcp-config <path> --allowedTools execute_blender_code,get_scene_info,get_object_info,set_texture`
+Claude Code is spawned with flags: `--print --system-prompt <path> --input-format stream-json --output-format stream-json --mcp-config <path> --allowedTools execute_blender_code,get_scene_info,get_object_info,get_viewport_screenshot`
+
+MCP config is generated at runtime by `commands.rs::new_chat()` with the resolved absolute path to `mcp-server/server.py`.
 
 System prompt: `droneai/system_prompt.md` (also copied to `droneai-studio/resources/system_prompt.md`)
+
+## MCP Server (droneai-studio/mcp-server/)
+
+Our own MCP bridge replacing the third-party `blender-mcp` package. A single Python file using FastMCP that:
+- Connects to Blender's TCP:9876 addon
+- Exposes 4 tools: `execute_blender_code`, `get_scene_info`, `get_object_info`, `get_viewport_screenshot`
+- No telemetry, no third-party asset integrations
+
+Dependencies: auto-managed by `uv run` via PEP 723 inline metadata (requires `mcp`)
 
 ## Platform Notes
 

@@ -1,8 +1,9 @@
 {
+  "_comment": "This file is a reference only. The actual config is generated at runtime by commands.rs with resolved absolute paths.",
   "mcpServers": {
     "blender": {
-      "command": "uvx",
-      "args": ["blender-mcp"]
+      "command": "uv",
+      "args": ["run", "mcp-server/server.py"]
     }
   }
 }
