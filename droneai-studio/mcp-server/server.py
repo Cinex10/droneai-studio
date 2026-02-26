@@ -109,10 +109,14 @@ _RESOURCES_DIR = os.path.normpath(os.path.join(_SCRIPT_DIR, "..", "resources"))
 
 # Preamble injected into every execute_blender_code call to ensure
 # `import droneai` works. Blender's embedded Python often ignores PYTHONPATH.
+# Also clears cached droneai modules so re-imports use this path, not a
+# stale version loaded by the Blender startup script.
 _SYS_PATH_PREAMBLE = (
     f"import sys as __sys; "
     f"__p = r'{_RESOURCES_DIR}'; "
-    f"__p not in __sys.path and __sys.path.insert(0, __p)\n"
+    f"__p in __sys.path and __sys.path.remove(__p); "
+    f"__sys.path.insert(0, __p); "
+    f"[__sys.modules.pop(__k, None) for __k in list(__sys.modules) if __k == 'droneai' or __k.startswith('droneai.')]\n"
 )
 
 
