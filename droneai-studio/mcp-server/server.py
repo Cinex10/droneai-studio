@@ -101,6 +101,20 @@ def _send_command(command_type: str, params: dict | None = None) -> dict:
 
 mcp = FastMCP("droneai-blender", instructions="Control Blender for drone show design")
 
+# Derive droneai library path from this script's location.
+# server.py is in mcp-server/, droneai is in resources/droneai,
+# so the parent containing droneai is ../resources/ relative to mcp-server/.
+_SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+_RESOURCES_DIR = os.path.normpath(os.path.join(_SCRIPT_DIR, "..", "resources"))
+
+# Preamble injected into every execute_blender_code call to ensure
+# `import droneai` works. Blender's embedded Python often ignores PYTHONPATH.
+_SYS_PATH_PREAMBLE = (
+    f"import sys as __sys; "
+    f"__p = r'{_RESOURCES_DIR}'; "
+    f"__p not in __sys.path and __sys.path.insert(0, __p)\n"
+)
+
 
 @mcp.tool()
 def execute_blender_code(code: str) -> str:
@@ -111,7 +125,7 @@ def execute_blender_code(code: str) -> str:
         code: Python code to execute in Blender's environment (has access to bpy)
     """
     try:
-        resp = _send_command("execute_code", {"code": code})
+        resp = _send_command("execute_code", {"code": _SYS_PATH_PREAMBLE + code})
         if resp.get("status") == "error":
             return f"Error: {resp.get('message', 'Unknown error')}"
         result = resp.get("result", {})
