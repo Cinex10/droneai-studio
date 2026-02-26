@@ -233,30 +233,34 @@ def build_show(spec: str) -> str:
         build_code = _SYS_PATH_PREAMBLE + f"""
 import json
 import base64
+import traceback
 
-spec_json = base64.b64decode('{spec_b64}').decode()
+try:
+    spec_json = base64.b64decode('{spec_b64}').decode()
 
-from droneai.engine.show_spec import ShowSpec
-from droneai.engine.show_builder import ShowBuilder
-from droneai.engine.show_renderer import render_to_blender
+    from droneai.engine.show_spec import ShowSpec
+    from droneai.engine.show_builder import ShowBuilder
+    from droneai.engine.show_renderer import render_to_blender
 
-spec = ShowSpec.from_json(spec_json)
-builder = ShowBuilder()
-result = builder.build(spec)
+    spec = ShowSpec.from_json(spec_json)
+    builder = ShowBuilder()
+    result = builder.build(spec)
 
-if not result.is_safe:
-    violations = "; ".join(result.safety_report.violations[:10])
-    print(json.dumps({{"safe": False, "violations": violations}}))
-else:
-    summary = render_to_blender(result)
-    report = {{
-        "safe": True,
-        "summary": summary,
-        "min_spacing": round(result.safety_report.min_spacing_found, 2),
-        "max_velocity": round(result.safety_report.max_velocity_found, 2),
-        "max_altitude": round(result.safety_report.max_altitude_found, 2),
-    }}
-    print(json.dumps(report))
+    if not result.is_safe:
+        violations = "; ".join(result.safety_report.violations[:10])
+        print(json.dumps({{"safe": False, "violations": violations}}))
+    else:
+        summary = render_to_blender(result)
+        report = {{
+            "safe": True,
+            "summary": summary,
+            "min_spacing": round(result.safety_report.min_spacing_found, 2),
+            "max_velocity": round(result.safety_report.max_velocity_found, 2),
+            "max_altitude": round(result.safety_report.max_altitude_found, 2),
+        }}
+        print(json.dumps(report))
+except Exception as __e:
+    print(json.dumps({{"safe": False, "error": str(__e), "traceback": traceback.format_exc()}}))
 """
         resp = _send_command("execute_code", {"code": build_code})
 
@@ -268,6 +272,9 @@ else:
             return f"Error: No output from build pipeline. Response: {resp}"
 
         result_data = _json.loads(result_str.strip())
+
+        if result_data.get("error"):
+            return f"Error in Blender: {result_data['error']}\n\nTraceback:\n{result_data.get('traceback', 'N/A')}"
 
         if not result_data.get("safe"):
             return f"Safety validation FAILED:\n{result_data.get('violations', 'Unknown')}\n\nAdjust the spec and try again."
