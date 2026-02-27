@@ -1,6 +1,6 @@
 import { useRef, useMemo, Component, type ReactNode } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
-import { OrbitControls, Grid } from "@react-three/drei";
+import { OrbitControls, Grid, GizmoHelper, GizmoViewport } from "@react-three/drei";
 import * as THREE from "three";
 import type { SceneData, DroneData } from "../types/scene";
 
@@ -207,6 +207,14 @@ function SceneContent({
         target={[0, 10, 0]}
         maxPolarAngle={Math.PI * 0.85}
       />
+
+      {/* Blender-style XYZ orientation gizmo — top right */}
+      <GizmoHelper alignment="top-right" margin={[60, 60]}>
+        <GizmoViewport
+          axisColors={["#cc3333", "#33cc33", "#3366cc"]}
+          labelColor="#fff"
+        />
+      </GizmoHelper>
     </>
   );
 }
