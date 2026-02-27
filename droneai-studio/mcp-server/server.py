@@ -338,6 +338,41 @@ for entry_idx in range(len(formations)):
                     )
                     break
 
+    # Hold keyframe for color: duplicate last color at hold_frame to prevent
+    # premature interpolation during position holds
+    hf = hold_frames[entry_idx]
+    if hf > frame:
+        if color_spec["type"] == "solid":
+            c = color_spec["value"]
+            for drone in drone_objs:
+                for node in drone.data.materials[0].node_tree.nodes:
+                    if node.type == "EMISSION":
+                        node.inputs["Color"].default_value = (c[0], c[1], c[2], 1.0)
+                        node.inputs["Color"].keyframe_insert(
+                            data_path="default_value", frame=hf
+                        )
+                        break
+        elif color_spec["type"] == "gradient":
+            ax = {"x": 0, "y": 1, "z": 2}[color_spec.get("axis", "x")]
+            sc, ec = color_spec["start"], color_spec["end"]
+            vals = [pos_list[j][ax] for j in range(len(drone_objs))]
+            lo, hi = min(vals), max(vals)
+            span = hi - lo if hi > lo else 1.0
+            for di, drone in enumerate(drone_objs):
+                t = (pos_list[di][ax] - lo) / span
+                c = (
+                    sc[0] + t * (ec[0] - sc[0]),
+                    sc[1] + t * (ec[1] - sc[1]),
+                    sc[2] + t * (ec[2] - sc[2]),
+                )
+                for node in drone.data.materials[0].node_tree.nodes:
+                    if node.type == "EMISSION":
+                        node.inputs["Color"].default_value = (c[0], c[1], c[2], 1.0)
+                        node.inputs["Color"].keyframe_insert(
+                            data_path="default_value", frame=hf
+                        )
+                        break
+
 # --- Transition interpolation ---
 interp_map = {
     "LINEAR": "LINEAR",
