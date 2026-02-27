@@ -193,6 +193,55 @@ body {
 }
 
 /* ============================================================
+   Viewport HUD — show metadata overlay
+   ============================================================ */
+
+.hud-panel {
+  background: rgba(10, 10, 15, 0.82);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 6px;
+  padding: 8px 12px;
+}
+
+.hud-grid {
+  display: grid;
+  grid-template-columns: auto auto;
+  column-gap: 16px;
+  row-gap: 3px;
+  align-items: baseline;
+}
+
+.hud-label {
+  font-family: ui-monospace, 'SF Mono', 'Cascadia Code', monospace;
+  font-size: 10px;
+  color: #7878a0;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  text-align: left;
+}
+
+.hud-value {
+  font-family: ui-monospace, 'SF Mono', 'Cascadia Code', monospace;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-primary);
+  white-space: nowrap;
+  text-align: right;
+}
+
+.hud-badge {
+  margin-top: 6px;
+  font-family: ui-monospace, 'SF Mono', 'Cascadia Code', monospace;
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-align: center;
+  padding: 2px 0;
+  border-radius: 3px;
+}
+
+/* ============================================================
    NLE Timeline — professional track-based layout
    ============================================================ */
 

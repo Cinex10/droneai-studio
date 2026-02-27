@@ -18,56 +18,44 @@ export default function ShowStatsHUD({ sceneData, showInfo }: ShowStatsHUDProps)
 
   const isSafe = safety?.is_safe ?? true;
 
+  // Build rows: [label, value]
+  const rows: [string, string][] = [];
+
+  if (drones > 0) {
+    rows.push(["Drones", String(spec?.drone_count ?? drones)]);
+  }
+  if (duration > 0) {
+    rows.push(["Duration", `${duration.toFixed(1)}s`]);
+  }
+  if (safety) {
+    rows.push(["Min spacing", `${safety.min_spacing_found.toFixed(1)}m`]);
+    rows.push(["Max velocity", `${safety.max_velocity_found.toFixed(1)}m/s`]);
+    rows.push(["Max altitude", `${safety.max_altitude_found.toFixed(1)}m`]);
+  }
+
   return (
-    <div className="absolute top-2 left-2 z-10 pointer-events-none select-none max-w-[calc(100%-16px)]">
-      <div
-        className="flex flex-wrap items-center gap-x-2.5 gap-y-1 px-2.5 py-1.5 rounded text-[10px] font-mono"
-        style={{
-          background: "rgba(10, 10, 15, 0.8)",
-          backdropFilter: "blur(8px)",
-          border: "1px solid rgba(255,255,255,0.06)",
-        }}
-      >
-        {/* Drone count */}
-        {drones > 0 && (
-          <span className="text-[var(--text-secondary)]">
-            <span className="text-[var(--text-primary)]">{spec?.drone_count ?? drones}</span> drones
-          </span>
-        )}
+    <div className="absolute top-2 left-2 z-10 pointer-events-none select-none">
+      <div className="hud-panel">
+        <div className="hud-grid">
+          {rows.map(([label, value]) => (
+            <div key={label} className="contents">
+              <span className="hud-label">{label}</span>
+              <span className="hud-value">{value}</span>
+            </div>
+          ))}
+        </div>
 
-        {/* Duration */}
-        {duration > 0 && (
-          <>
-            <span className="text-[var(--border)]">|</span>
-            <span className="text-[var(--text-secondary)]">
-              <span className="text-[var(--text-primary)]">{duration.toFixed(1)}</span>s
-            </span>
-          </>
-        )}
-
-        {/* Safety stats */}
+        {/* Safety badge — full width below the grid */}
         {safety && (
-          <>
-            <span className="text-[var(--border)]">|</span>
-            <span className="text-[var(--text-secondary)]">
-              <span className="text-[var(--text-primary)]">{safety.min_spacing_found.toFixed(1)}</span>m min
-            </span>
-            <span className="text-[var(--text-secondary)]">
-              <span className="text-[var(--text-primary)]">{safety.max_velocity_found.toFixed(1)}</span>m/s
-            </span>
-            <span className="text-[var(--text-secondary)]">
-              <span className="text-[var(--text-primary)]">{safety.max_altitude_found.toFixed(1)}</span>m alt
-            </span>
-            <span
-              className="text-[9px] px-1.5 py-px rounded"
-              style={{
-                background: isSafe ? "rgba(34, 197, 94, 0.15)" : "rgba(239, 68, 68, 0.15)",
-                color: isSafe ? "#4ade80" : "#f87171",
-              }}
-            >
-              {isSafe ? "SAFE" : "WARN"}
-            </span>
-          </>
+          <div
+            className="hud-badge"
+            style={{
+              background: isSafe ? "rgba(34, 197, 94, 0.12)" : "rgba(239, 68, 68, 0.12)",
+              color: isSafe ? "#4ade80" : "#f87171",
+            }}
+          >
+            {isSafe ? "SAFE" : "WARN"}
+          </div>
         )}
       </div>
     </div>
