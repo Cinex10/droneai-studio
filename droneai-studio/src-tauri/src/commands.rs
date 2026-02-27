@@ -8,6 +8,7 @@ use tauri::State;
 
 use crate::blender::BlenderState;
 use crate::claude_code::ClaudeState;
+use crate::project::{ChatMessage as ProjectChatMessage, ProjectData, ProjectMetadata, ProjectState};
 
 /// Resolve a bundled resource by name.
 ///
@@ -428,5 +429,101 @@ pub fn run_test_show(app: tauri::AppHandle) -> Result<String, String> {
         return Err(format!("Failed to create test show: {}", err));
     }
     Ok(format!("Test show response: {}", resp))
+}
+
+// --- Project commands ---
+
+#[tauri::command]
+pub fn create_project(
+    name: String,
+    project: State<'_, ProjectState>,
+) -> Result<ProjectMetadata, String> {
+    let mut pm = project.lock().unwrap();
+    pm.create(&name)
+}
+
+#[tauri::command]
+pub fn list_projects(
+    project: State<'_, ProjectState>,
+) -> Result<Vec<ProjectMetadata>, String> {
+    let pm = project.lock().unwrap();
+    pm.list()
+}
+
+#[tauri::command]
+pub fn open_project(
+    id: String,
+    project: State<'_, ProjectState>,
+) -> Result<ProjectData, String> {
+    let mut pm = project.lock().unwrap();
+    pm.open(&id)
+}
+
+#[tauri::command]
+pub fn save_project(
+    chat: Vec<ProjectChatMessage>,
+    spec: Option<serde_json::Value>,
+    build_result: Option<serde_json::Value>,
+    project: State<'_, ProjectState>,
+) -> Result<(), String> {
+    let mut pm = project.lock().unwrap();
+
+    // Save .blend file via Blender (best-effort)
+    if let Some(blend_path) = pm.blend_path() {
+        let code = format!(
+            "import bpy; bpy.ops.wm.save_as_mainfile(filepath=r'{}')",
+            blend_path.display()
+        );
+        let payload = serde_json::json!({
+            "type": "execute_code",
+            "params": { "code": code }
+        });
+        let _ = blender_mcp_call(&payload);
+    }
+
+    pm.save(chat, spec, build_result)
+}
+
+#[tauri::command]
+pub fn delete_project(
+    id: String,
+    project: State<'_, ProjectState>,
+) -> Result<(), String> {
+    let mut pm = project.lock().unwrap();
+    pm.delete(&id)
+}
+
+#[tauri::command]
+pub fn rename_project(
+    id: String,
+    name: String,
+    project: State<'_, ProjectState>,
+) -> Result<(), String> {
+    let mut pm = project.lock().unwrap();
+    pm.rename(&id, &name)
+}
+
+#[tauri::command]
+pub fn is_project_dirty(
+    project: State<'_, ProjectState>,
+) -> bool {
+    let pm = project.lock().unwrap();
+    pm.is_dirty()
+}
+
+#[tauri::command]
+pub fn mark_dirty(
+    project: State<'_, ProjectState>,
+) {
+    let mut pm = project.lock().unwrap();
+    pm.mark_dirty();
+}
+
+#[tauri::command]
+pub fn get_current_project_name(
+    project: State<'_, ProjectState>,
+) -> Option<String> {
+    let pm = project.lock().unwrap();
+    pm.current_name()
 }
 
