@@ -13,6 +13,7 @@ export default function SetupScreen({ onReady }: SetupScreenProps) {
   const [claudeReady, setClaudeReady] = useState(false);
   const [launching, setLaunching] = useState<string | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const autoLaunched = useRef(false);
 
   const runChecks = useCallback(async () => {
     try {
@@ -31,14 +32,24 @@ export default function SetupScreen({ onReady }: SetupScreenProps) {
     }
   }, []);
 
-  // Initial check + auto-poll when Blender is starting (process alive, MCP not ready)
+  // Auto-launch Blender on mount — always relaunch to load the correct
+  // project's .blend file. This ensures project isolation: each time we
+  // enter SetupScreen (new project or existing), Blender restarts with
+  // the right scene data.
   useEffect(() => {
-    runChecks().then(({ blender }) => {
-      if (blender === "starting") {
-        startPolling("blender");
+    if (autoLaunched.current) return;
+    autoLaunched.current = true;
+
+    (async () => {
+      setLaunching("blender");
+      try {
+        await invoke("launch_blender");
+      } catch (e) {
+        console.error("Failed to auto-launch Blender:", e);
       }
-    });
-  }, [runChecks]);
+      startPolling("blender");
+    })();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Stop polling on unmount
   useEffect(() => {
@@ -61,18 +72,6 @@ export default function SetupScreen({ onReady }: SetupScreenProps) {
     }, 1500);
   }, [runChecks]);
 
-  const handleLaunchBlender = async () => {
-    try {
-      setLaunching("blender");
-      await invoke("launch_blender");
-      // Blender takes ~5-10s to start MCP server, poll until ready
-      startPolling("blender");
-    } catch (e) {
-      setLaunching(null);
-      console.error("Failed to launch Blender:", e);
-    }
-  };
-
   const handleStartClaude = async () => {
     try {
       setLaunching("claude");
@@ -85,7 +84,6 @@ export default function SetupScreen({ onReady }: SetupScreenProps) {
   };
 
   const blenderReady = blenderStatus === "running";
-  const blenderAlive = blenderStatus !== "stopped";
 
   return (
     <div className="h-screen flex items-center justify-center bg-[var(--bg-primary)]">
@@ -105,22 +103,13 @@ export default function SetupScreen({ onReady }: SetupScreenProps) {
               <p className="text-xs text-[var(--text-secondary)]">
                 {blenderReady
                   ? "Running"
-                  : blenderAlive || launching === "blender"
-                    ? "Initializing MCP server..."
-                    : "Not detected"}
+                  : "Loading project scene..."}
               </p>
             </div>
             {blenderReady ? (
               <span className="text-green-400 text-sm">Ready</span>
-            ) : blenderAlive || launching === "blender" ? (
-              <span className="text-yellow-400 text-sm animate-pulse">Starting...</span>
             ) : (
-              <button
-                onClick={handleLaunchBlender}
-                className="px-3 py-1 bg-[var(--accent)] text-white text-sm rounded hover:bg-[var(--accent-hover)]"
-              >
-                Launch
-              </button>
+              <span className="text-yellow-400 text-sm animate-pulse">Starting...</span>
             )}
           </div>
 

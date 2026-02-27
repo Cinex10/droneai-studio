@@ -372,11 +372,12 @@ function App() {
     return (
       <SetupScreen
         onReady={async () => {
+          // Blender was relaunched by SetupScreen with the correct
+          // project's .blend file (or fresh for new projects), so the
+          // scene is already isolated per project.
+
           if (isExistingProject) {
-            // Scene restore is handled by launch_blender — it passes the
-            // saved .blend file to Blender's CLI so it loads natively on
-            // startup (no crash-prone bpy.ops.wm.open_mainfile via MCP).
-            // Restore Claude conversation context
+            // Restore Claude conversation context for this project
             try {
               const chatForRestore: ProjectChatMessage[] = messages.map((m) => ({
                 id: m.id,
@@ -385,17 +386,11 @@ function App() {
                 timestamp: m.timestamp,
               }));
               await invoke("restore_chat", { messages: chatForRestore });
-              console.log("[App] restore_chat: sent", chatForRestore.length, "messages");
             } catch (e) {
               console.error("[App] Failed to restore chat:", e);
             }
           } else {
-            // New project — clear any leftover Blender scene from previous project
-            try {
-              await invoke("reset_blender_scene");
-            } catch {
-              // Blender may not be connected yet — that's fine for new projects
-            }
+            // New project — clear frontend state from previous project
             clearScene();
             clearShowInfo();
           }
@@ -406,6 +401,7 @@ function App() {
           const poll = setInterval(async () => {
             attempts++;
             await refreshScene();
+            await refreshShowInfo();
             if (attempts >= 5) clearInterval(poll);
           }, 2000);
         }}
