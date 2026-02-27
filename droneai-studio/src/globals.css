@@ -249,20 +249,47 @@ body {
   background: rgba(99, 102, 241, 0.18);
 }
 
-/* Project name */
+/* Breadcrumb: "Projects >" */
+.app-header-breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  padding: 3px 4px;
+  border-radius: 4px;
+  transition: background 0.12s;
+  flex-shrink: 0;
+}
+.app-header-breadcrumb:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+.app-header-breadcrumb-text {
+  font-size: 12px;
+  color: var(--text-secondary);
+  transition: color 0.12s;
+}
+.app-header-breadcrumb:hover .app-header-breadcrumb-text {
+  color: var(--text-primary);
+}
+
+/* Project name — prominent title */
 .app-header-project {
-  font-size: 13px;
-  font-weight: 500;
+  font-size: 14px;
+  font-weight: 600;
   color: var(--text-primary);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 220px;
+  max-width: 240px;
+  letter-spacing: -0.01em;
 }
 
 .app-header-dirty {
-  color: var(--text-secondary);
+  color: var(--accent);
   margin-left: 2px;
+  font-weight: 400;
 }
 
 /* Divider */

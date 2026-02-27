@@ -453,6 +453,15 @@ function App() {
             </svg>
           </button>
           <div className="app-header-divider" />
+          <button className="app-header-breadcrumb" onClick={handleBack} title="Back to projects">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" opacity="0.5">
+              <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
+            </svg>
+            <span className="app-header-breadcrumb-text">Projects</span>
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" opacity="0.35">
+              <polyline points="9 18 15 12 9 6" />
+            </svg>
+          </button>
           <span className="app-header-project">
             {project.currentProject?.name ?? "Untitled"}
             {project.isDirty && (
