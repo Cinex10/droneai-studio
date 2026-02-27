@@ -441,7 +441,7 @@ function App() {
     <div className="flex flex-col h-screen bg-[var(--bg-primary)] overflow-hidden">
       {/* Workspace header */}
       <div className="app-header">
-        {/* Left: logo + back */}
+        {/* Left: logo + actions */}
         <div className="app-header-left">
           <button onClick={handleBack} className="app-logo" title="Back to projects">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
@@ -453,6 +453,33 @@ function App() {
             </svg>
           </button>
           <div className="app-header-divider" />
+          {/* Chat toggle */}
+          <button
+            onClick={() => setChatOpen(!chatOpen)}
+            title={chatOpen ? "Hide chat" : "Show chat"}
+            className={`app-header-icon ${chatOpen ? "active" : ""}`}
+          >
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+            </svg>
+          </button>
+          {/* Save */}
+          <button
+            onClick={handleSave}
+            disabled={!project.isDirty}
+            className="app-header-icon"
+            title="Save (⌘S)"
+          >
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" />
+              <polyline points="17 21 17 13 7 13 7 21" />
+              <polyline points="7 3 7 8 15 8" />
+            </svg>
+          </button>
+        </div>
+
+        {/* Center: breadcrumb + project name */}
+        <div className="app-header-center">
           <button className="app-header-breadcrumb" onClick={handleBack} title="Back to projects">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" opacity="0.5">
               <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
@@ -470,49 +497,8 @@ function App() {
           </span>
         </div>
 
-        {/* Center: undo/redo (placeholder) */}
-        <div className="app-header-center">
-          <button className="app-header-icon" title="Undo" disabled>
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M3 7v6h6" /><path d="M3 13a9 9 0 0 1 15.36-6.36" />
-            </svg>
-          </button>
-          <button className="app-header-icon" title="Redo" disabled>
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M21 7v6h-6" /><path d="M21 13a9 9 0 0 0-15.36-6.36" />
-            </svg>
-          </button>
-        </div>
-
         {/* Right: actions */}
         <div className="app-header-right">
-          {/* Chat toggle */}
-          <button
-            onClick={() => setChatOpen(!chatOpen)}
-            title={chatOpen ? "Hide chat" : "Show chat"}
-            className={`app-header-icon ${chatOpen ? "active" : ""}`}
-          >
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-            </svg>
-          </button>
-
-          {/* Save */}
-          <button
-            onClick={handleSave}
-            disabled={!project.isDirty}
-            className="app-header-icon"
-            title="Save (⌘S)"
-          >
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" />
-              <polyline points="17 21 17 13 7 13 7 21" />
-              <polyline points="7 3 7 8 15 8" />
-            </svg>
-          </button>
-
-          <div className="app-header-divider" />
-
           {/* Export */}
           <button className="app-header-export" title="Export show">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

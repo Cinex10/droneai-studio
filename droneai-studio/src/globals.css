@@ -206,6 +206,7 @@ body {
   border-bottom: 1px solid var(--border);
   flex-shrink: 0;
   gap: 8px;
+  position: relative;
 }
 
 .app-header-left,
@@ -223,6 +224,10 @@ body {
 
 .app-header-center {
   flex-shrink: 0;
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  pointer-events: auto;
 }
 
 .app-header-right {
