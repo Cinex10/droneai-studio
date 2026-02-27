@@ -4,10 +4,8 @@ import type { SceneData } from "../../types/scene";
 import type { ShowInfo, TimelineLayerVisibility } from "./types";
 import Minimap from "./Minimap";
 import Ruler from "./Ruler";
-import DroneCountTrack from "./DroneCountTrack";
 import FormationTrack from "./FormationTrack";
 import ColorTrack from "./ColorTrack";
-import SafetyStrip from "./SafetyStrip";
 import ControlsBar from "./ControlsBar";
 
 interface TimelinePanelProps {
@@ -17,9 +15,9 @@ interface TimelinePanelProps {
   onFrameChange: (frame: number) => void;
 }
 
-const MIN_HEIGHT = 80;
+const MIN_HEIGHT = 64;
 const MAX_HEIGHT = 350;
-const DEFAULT_HEIGHT = 160;
+const DEFAULT_HEIGHT = 140;
 
 export default function TimelinePanel({
   sceneData,
@@ -135,8 +133,8 @@ export default function TimelinePanel({
 
   if (!hasShow) {
     return (
-      <div className="h-10 flex items-center justify-center bg-[var(--bg-secondary)] border-t border-[var(--border)]">
-        <span className="text-xs text-[var(--text-secondary)]">No show loaded</span>
+      <div className="h-8 flex items-center justify-center bg-[var(--bg-secondary)] border-t border-[var(--border)]">
+        <span className="text-[10px] text-[var(--text-secondary)]">No show loaded</span>
       </div>
     );
   }
@@ -149,60 +147,54 @@ export default function TimelinePanel({
     >
       {/* Resize handle */}
       <div
-        className="h-1 cursor-ns-resize hover:bg-[var(--accent)]/30 transition-colors"
+        className="h-1 cursor-ns-resize hover:bg-[var(--accent)]/30 transition-colors flex-shrink-0"
         onMouseDown={handleResizeStart}
       />
 
-      {/* Layers */}
-      <div className="flex-1 flex flex-col overflow-hidden">
-        {layers.minimap && (
-          <Minimap
-            entries={entries}
-            totalFrames={totalFrames}
-            fps={fps}
-            zoom={zoom}
-            scrollOffset={scrollOffset}
-            onNavigate={setScrollOffset}
-          />
-        )}
-
-        <Ruler
+      {/* Minimap scrubber */}
+      {layers.minimap && entries.length > 0 && (
+        <Minimap
+          entries={entries}
           totalFrames={totalFrames}
-          currentFrame={currentFrame}
           fps={fps}
           zoom={zoom}
           scrollOffset={scrollOffset}
-          onSeek={handleSeek}
+          currentFrame={currentFrame}
+          onNavigate={setScrollOffset}
         />
+      )}
 
-        {layers.droneCount && spec && (
-          <DroneCountTrack droneCount={spec.drone_count} />
-        )}
+      {/* Ruler */}
+      <Ruler
+        totalFrames={totalFrames}
+        currentFrame={currentFrame}
+        fps={fps}
+        zoom={zoom}
+        scrollOffset={scrollOffset}
+        onSeek={handleSeek}
+      />
 
-        {layers.formations && entries.length > 0 && (
-          <FormationTrack
-            entries={entries}
-            totalFrames={totalFrames}
-            fps={fps}
-            zoom={zoom}
-            scrollOffset={scrollOffset}
-          />
-        )}
+      {/* Formation track (takes remaining space) */}
+      {layers.formations && entries.length > 0 && (
+        <FormationTrack
+          entries={entries}
+          totalFrames={totalFrames}
+          fps={fps}
+          zoom={zoom}
+          scrollOffset={scrollOffset}
+        />
+      )}
 
-        {layers.color && entries.length > 0 && (
-          <ColorTrack
-            entries={entries}
-            totalFrames={totalFrames}
-            fps={fps}
-            zoom={zoom}
-            scrollOffset={scrollOffset}
-          />
-        )}
-
-        {layers.safety && (
-          <SafetyStrip safety={showInfo?.safety ?? null} />
-        )}
-      </div>
+      {/* Color gradient strip */}
+      {layers.color && entries.length > 0 && (
+        <ColorTrack
+          entries={entries}
+          totalFrames={totalFrames}
+          fps={fps}
+          zoom={zoom}
+          scrollOffset={scrollOffset}
+        />
+      )}
 
       {/* Controls */}
       <ControlsBar

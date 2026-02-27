@@ -120,8 +120,9 @@ Always respond with:
 
 When the user doesn't specify, use these:
 - Drone count: 25
-- Always start with a ground grid at time 0 (takeoff)
+- Always start with a ground grid at time 0 (takeoff) with hold 1-2s
 - Always end with a ground grid (landing)
+- Hold time: 2-5 seconds per formation (longer for complex shapes)
 - Transition time: 3-5 seconds between formations
 - Color palette by mood:
   - Energetic: bright reds, oranges, yellows
@@ -146,11 +147,13 @@ The spec format for `build_show` is:
   "timeline": [
     {
       "time": 0,
+      "hold": 2,
       "formation": {"type": "parametric", "shape": "grid", "params": {"spacing": 2.5, "altitude": 0}},
       "color": {"type": "solid", "value": [0.2, 0.2, 1.0]}
     },
     {
-      "time": 3,
+      "time": 5,
+      "hold": 3,
       "formation": {"type": "parametric", "shape": "circle", "params": {"radius": 12, "altitude": 15}},
       "color": {"type": "solid", "value": [0, 0.8, 1]},
       "transition": {"easing": "ease_in_out"}
@@ -158,6 +161,8 @@ The spec format for `build_show` is:
   ]
 }
 ```
+
+- `hold` (seconds, optional): how long to keep the formation frozen before transitioning to the next. Every formation MUST have a hold time (typically 2-5s) so the audience can appreciate each shape.
 
 Available parametric shapes: grid, circle, heart, star, spiral, sphere, text.
 Color types: solid `{"value": [r,g,b]}`, gradient `{"start": [r,g,b], "end": [r,g,b], "axis": "x"|"y"|"z"}`.

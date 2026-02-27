@@ -210,6 +210,7 @@ fps = _DATA["fps"]
 drone_count = _DATA["drone_count"]
 formations = _DATA["formations"]
 frames = _DATA["frames"]
+hold_frames = _DATA.get("hold_frames", frames)
 colors = _DATA["colors"]
 easings = _DATA["easings"]
 
@@ -296,6 +297,14 @@ for entry_idx in range(len(formations)):
         drone.location = (p[0], p[1], p[2])
         drone.keyframe_insert(data_path="location", frame=frame)
 
+    # Hold keyframe: duplicate positions at hold_frame to freeze drones
+    hf = hold_frames[entry_idx]
+    if hf > frame:
+        for di, drone in enumerate(drone_objs):
+            p = pos_list[di]
+            drone.location = (p[0], p[1], p[2])
+            drone.keyframe_insert(data_path="location", frame=hf)
+
     # Keyframe colors
     if color_spec["type"] == "solid":
         c = color_spec["value"]
@@ -338,7 +347,9 @@ interp_map = {
 }
 for i in range(len(easings)):
     easing = easings[i]
-    f_start, f_end = frames[i], frames[i + 1]
+    # Transition starts after hold ends (hold_frames[i]), arrives at frames[i+1]
+    f_start = hold_frames[i]
+    f_end = frames[i + 1]
     interp = interp_map.get(easing, "BEZIER")
     for drone in drone_objs:
         if not drone.animation_data or not drone.animation_data.action:
@@ -396,6 +407,7 @@ def _generate_blender_script(result: BuildResult) -> str:
         "drone_count": spec.drone_count,
         "formations": formations_data,
         "frames": result.frames,
+        "hold_frames": result.hold_frames,
         "colors": color_data,
         "easings": easings,
     }
@@ -423,6 +435,7 @@ def build_show(spec: str) -> str:
                 "timeline": [
                     {
                         "time": float (seconds),
+                        "hold": float (seconds, optional, default 0) — hold formation before transitioning,
                         "formation": {"type": "parametric", "shape": "grid", "params": {...}}
                                   or {"type": "positions", "positions": [[x,y,z], ...]},
                         "color": {"type": "solid", "value": [r,g,b]}

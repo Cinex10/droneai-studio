@@ -10,6 +10,7 @@ import SetupScreen from "./components/SetupScreen";
 import ProjectPicker from "./components/ProjectPicker";
 import CloseDialog from "./components/CloseDialog";
 import ViewportLoader from "./components/ViewportLoader";
+import ShowStatsHUD from "./components/ShowStatsHUD";
 import { useClaude } from "./hooks/useClaude";
 import { useSceneData } from "./hooks/useSceneData";
 import { useProject } from "./hooks/useProject";
@@ -464,6 +465,7 @@ function App() {
         <div className="flex-1 flex flex-col">
           <div className="flex-1 relative">
             <DroneViewport sceneData={sceneData} currentFrame={currentFrame} />
+            <ShowStatsHUD sceneData={sceneData} showInfo={showInfo} />
             <ViewportLoader visible={isRestoring} />
           </div>
           <TimelinePanel

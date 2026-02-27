@@ -41,14 +41,12 @@ export default function ControlsBar({
 
   const layerKeys: { key: keyof TimelineLayerVisibility; label: string }[] = [
     { key: "minimap", label: "M" },
-    { key: "droneCount", label: "D" },
     { key: "formations", label: "F" },
     { key: "color", label: "C" },
-    { key: "safety", label: "S" },
   ];
 
   return (
-    <div className="flex items-center h-8 px-3 gap-3 bg-[var(--bg-tertiary)] border-t border-[var(--border)]">
+    <div className="flex items-center h-7 px-3 gap-3 bg-[var(--bg-tertiary)] border-t border-[var(--border)] flex-shrink-0">
       {/* Play/Pause */}
       <button
         onClick={onPlayPause}
@@ -59,7 +57,7 @@ export default function ControlsBar({
       </button>
 
       {/* Time display */}
-      <span className="text-xs text-[var(--text-secondary)] font-mono">
+      <span className="text-[10px] text-[var(--text-secondary)] font-mono">
         {hasShow
           ? `${formatTime(currentFrame, fps)} / ${formatTime(totalFrames, fps)}`
           : "--:-- / --:--"}
@@ -69,7 +67,7 @@ export default function ControlsBar({
       <button
         onClick={cycleSpeed}
         disabled={!hasShow}
-        className="text-xs text-[var(--text-secondary)] hover:text-[var(--text-primary)] font-mono px-1.5 py-0.5 rounded bg-[var(--bg-secondary)] disabled:opacity-30"
+        className="text-[10px] text-[var(--text-secondary)] hover:text-[var(--text-primary)] font-mono px-1.5 py-0.5 rounded bg-[var(--bg-secondary)] disabled:opacity-30"
       >
         {speed}x
       </button>
@@ -82,7 +80,7 @@ export default function ControlsBar({
           <button
             key={key}
             onClick={() => onToggleLayer(key)}
-            className={`text-[10px] w-5 h-5 rounded font-mono ${
+            className={`text-[9px] w-4 h-4 rounded font-mono ${
               layers[key]
                 ? "bg-[var(--accent)]/20 text-[var(--accent)]"
                 : "bg-[var(--bg-secondary)] text-[var(--text-secondary)]"

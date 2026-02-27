@@ -18,6 +18,7 @@ export interface TransitionSpec {
 
 export interface TimelineEntry {
   time: number;
+  hold?: number;
   formation: FormationSpec;
   color: ColorSpec;
   transition?: TransitionSpec;
