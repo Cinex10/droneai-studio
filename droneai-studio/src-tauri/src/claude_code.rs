@@ -1,5 +1,7 @@
 // droneai-studio/src-tauri/src/claude_code.rs
+use std::fs::{self, OpenOptions};
 use std::io::{BufRead, BufReader, Write};
+use std::path::PathBuf;
 use std::process::{Child, Command, Stdio};
 use std::sync::Mutex;
 use std::thread;
@@ -9,6 +11,15 @@ use tauri::{AppHandle, Emitter};
 pub struct ClaudeSession {
     child: Option<Child>,
     stdin: Option<std::process::ChildStdin>,
+}
+
+/// Return the log directory for Claude session transcripts.
+/// In dev mode: <project>/droneai-studio/logs/
+/// Creates the directory if it doesn't exist.
+fn log_dir() -> PathBuf {
+    let dir = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../logs");
+    let _ = fs::create_dir_all(&dir);
+    dir
 }
 
 impl ClaudeSession {
@@ -34,6 +45,10 @@ impl ClaudeSession {
         let claude_bin = format!("{}/.local/bin/claude", home);
         let extra_path = format!("{}/.local/bin:{}/.cargo/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin", home, home);
 
+        // Prepare log file with timestamp
+        let timestamp = chrono::Local::now().format("%Y%m%d-%H%M%S");
+        let log_path = log_dir().join(format!("claude-session-{}.jsonl", timestamp));
+
         let mut child = Command::new(&claude_bin)
             .args([
                 "--print",
@@ -46,7 +61,6 @@ impl ClaudeSession {
                 "--allowedTools",
                     "mcp__blender__execute_blender_code,mcp__blender__get_scene_info,mcp__blender__get_object_info,mcp__blender__get_viewport_screenshot,mcp__blender__build_show,mcp__blender__update_show",
                 "--dangerously-skip-permissions",
-                "--no-session-persistence",
             ])
             .env_remove("CLAUDECODE")
             .env("PATH", &extra_path)
@@ -63,14 +77,25 @@ impl ClaudeSession {
         self.child = Some(child);
         self.stdin = Some(stdin);
 
-        // Read stdout in background thread, emit events to frontend
+        // Read stdout in background thread, emit events to frontend + log to file
         let app_clone = app.clone();
+        let stdout_log_path = log_path.clone();
         thread::spawn(move || {
             let reader = BufReader::new(stdout);
+            let mut log_file = OpenOptions::new()
+                .create(true)
+                .append(true)
+                .open(&stdout_log_path)
+                .ok();
+
             for line in reader.lines() {
                 match line {
                     Ok(text) => {
                         let _ = app_clone.emit("claude-response", &text);
+                        // Append to log file
+                        if let Some(ref mut f) = log_file {
+                            let _ = writeln!(f, "{}", text);
+                        }
                     }
                     Err(_) => break,
                 }
@@ -78,20 +103,31 @@ impl ClaudeSession {
             let _ = app_clone.emit("claude-exited", ());
         });
 
-        // Read stderr in background thread for diagnostics
+        // Read stderr in background thread for diagnostics + log
+        let stderr_log_path = log_dir().join(format!("claude-session-{}-stderr.log", timestamp));
         thread::spawn(move || {
             let reader = BufReader::new(stderr);
+            let mut log_file = OpenOptions::new()
+                .create(true)
+                .append(true)
+                .open(&stderr_log_path)
+                .ok();
+
             for line in reader.lines() {
                 match line {
                     Ok(text) => {
                         eprintln!("[claude stderr] {}", text);
                         let _ = app.emit("claude-stderr", &text);
+                        if let Some(ref mut f) = log_file {
+                            let _ = writeln!(f, "{}", text);
+                        }
                     }
                     Err(_) => break,
                 }
             }
         });
 
+        eprintln!("[claude] Session log: {}", log_path.display());
         Ok(())
     }
 

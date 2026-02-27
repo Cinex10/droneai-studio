@@ -9,3 +9,6 @@ __pycache__/
 # Generated show files
 *_show.json
 *_show_*.json
+
+# Claude session logs
+droneai-studio/logs/
