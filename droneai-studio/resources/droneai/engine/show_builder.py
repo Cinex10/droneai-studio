@@ -38,7 +38,8 @@ class BuildResult:
     safety_report: SafetyResult
     formations: List[List[Position]]  # positions per timeline entry
     assignments: List[List[int]]  # transition assignments between consecutive entries
-    frames: List[int]  # Blender frame number per timeline entry
+    frames: List[int]  # Blender frame number per timeline entry (arrival)
+    hold_frames: List[int]  # frame where hold ends (same as frames[i] if no hold)
     spec: ShowSpec  # the spec that was built
 
 
@@ -80,8 +81,18 @@ class ShowBuilder:
         for i in range(len(formations)):
             formations[i] = self.enforcer.enforce(formations[i], enforce_spacing)
 
-        # Step 4: Compute frame numbers
-        frames = [int(entry.time * spec.fps) for entry in spec.timeline]
+        # Step 4: Compute frame numbers (with hold duplicates)
+        # Each entry gets a "start" frame. If it has a hold, a duplicate
+        # keyframe is inserted at start + hold to freeze the formation.
+        frames = []
+        hold_frames = []
+        for entry in spec.timeline:
+            start = int(entry.time * spec.fps)
+            frames.append(start)
+            if entry.hold > 0:
+                hold_frames.append(int((entry.time + entry.hold) * spec.fps))
+            else:
+                hold_frames.append(start)  # no hold — same as start
 
         # Step 5: Build timeline and validate safety
         timeline = self._build_timeline(formations, frames, spec)
@@ -93,6 +104,7 @@ class ShowBuilder:
             formations=formations,
             assignments=assignments,
             frames=frames,
+            hold_frames=hold_frames,
             spec=spec,
         )
 
@@ -124,11 +136,18 @@ class ShowBuilder:
             frame_dict = {drone_ids[j]: positions[j] for j in range(len(positions))}
             timeline.append((time_s, frame_dict))
 
-            # Add interpolated midpoint between this and next formation for velocity check
+            # Add hold endpoint (same positions, later time) for velocity check
+            hold = spec.timeline[idx].hold
+            if hold > 0:
+                hold_time = time_s + hold
+                timeline.append((hold_time, dict(frame_dict)))
+
+            # Add interpolated midpoint between hold-end and next formation
             if idx < len(formations) - 1:
                 next_positions = formations[idx + 1]
                 next_time = frames[idx + 1] / spec.fps
-                mid_time = (time_s + next_time) / 2
+                transition_start = time_s + hold if hold > 0 else time_s
+                mid_time = (transition_start + next_time) / 2
                 mid_dict = {}
                 for j in range(spec.drone_count):
                     mid_dict[drone_ids[j]] = tuple(

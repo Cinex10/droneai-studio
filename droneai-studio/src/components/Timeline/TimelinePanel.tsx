@@ -214,6 +214,7 @@ export default function TimelinePanel({
               fps={fps}
               zoom={zoom}
               scrollOffset={scrollOffset}
+              droneCount={spec?.drone_count ?? sceneData?.drones?.length ?? 0}
             />
           )}
 

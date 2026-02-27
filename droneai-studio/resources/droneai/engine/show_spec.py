@@ -93,10 +93,11 @@ class TransitionSpec:
 
 @dataclass
 class TimelineEntry:
-    time: float  # seconds
+    time: float  # seconds — when the formation is reached
     formation: FormationSpec
     color: ColorSpec
     transition: Optional[TransitionSpec] = None
+    hold: float = 0.0  # seconds to hold before transitioning to next
 
     @classmethod
     def from_dict(cls, d: dict) -> "TimelineEntry":
@@ -106,6 +107,7 @@ class TimelineEntry:
             formation=FormationSpec.from_dict(d["formation"]),
             color=ColorSpec.from_dict(d["color"]),
             transition=transition,
+            hold=d.get("hold", 0.0),
         )
 
     def to_dict(self) -> dict:
@@ -116,6 +118,8 @@ class TimelineEntry:
         }
         if self.transition:
             out["transition"] = self.transition.to_dict()
+        if self.hold > 0:
+            out["hold"] = self.hold
         return out
 
 
