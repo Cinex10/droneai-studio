@@ -145,9 +145,9 @@ function SceneContent({
       <Grid
         args={[100, 100]}
         cellSize={1}
-        cellColor="#2a2a3a"
+        cellColor="#3a3a4e"
         sectionSize={10}
-        sectionColor="#3a3a50"
+        sectionColor="#4e4e68"
         fadeDistance={80}
         fadeStrength={1}
         position={[0, 0, 0]}
