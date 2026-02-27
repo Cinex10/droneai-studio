@@ -380,7 +380,7 @@ body {
 }
 
 .tl-gutter-spacer {
-  height: 22px;
+  height: 24px;
   flex-shrink: 0;
   border-bottom: 1px solid var(--border);
 }
@@ -414,9 +414,10 @@ body {
 }
 
 .tl-gutter-text {
-  font-size: 10px;
+  font-size: 11px;
   font-family: ui-monospace, 'SF Mono', 'Cascadia Code', monospace;
-  color: var(--text-secondary);
+  color: #a0a0b8;
+  font-weight: 500;
   letter-spacing: 0.04em;
   text-transform: uppercase;
   white-space: nowrap;
@@ -427,7 +428,7 @@ body {
 
 .tl-ruler {
   position: relative;
-  height: 22px;
+  height: 24px;
   background: #0f0f18;
   cursor: pointer;
   flex-shrink: 0;
@@ -448,18 +449,19 @@ body {
   height: 3px;
   border-radius: 50%;
   background: var(--text-secondary);
-  opacity: 0.2;
-  margin-top: 6px;
+  opacity: 0.3;
+  margin-top: 7px;
 }
 
 .tl-ruler-label {
   position: absolute;
-  top: 9px;
+  top: 8px;
   left: 4px;
-  font-size: 8px;
+  font-size: 10px;
+  font-weight: 400;
   font-family: ui-monospace, 'SF Mono', 'Cascadia Code', monospace;
-  color: var(--text-secondary);
-  opacity: 0.55;
+  color: #9898b0;
+  letter-spacing: 0.02em;
   white-space: nowrap;
   pointer-events: none;
 }
@@ -544,19 +546,18 @@ body {
 }
 
 .tl-clip-glyph {
-  font-size: 11px;
+  font-size: 12px;
   flex-shrink: 0;
   line-height: 1;
 }
 
 .tl-clip-name {
-  font-size: 10px;
+  font-size: 11px;
   font-family: ui-monospace, 'SF Mono', 'Cascadia Code', monospace;
-  font-weight: 600;
+  font-weight: 500;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--text-primary);
-  opacity: 0.9;
+  letter-spacing: 0.04em;
+  color: #e0e0f0;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -594,13 +595,13 @@ body {
 .tl-chip {
   display: inline-flex;
   align-items: center;
-  gap: 2px;
-  font-size: 8px;
+  gap: 3px;
+  font-size: 10px;
   font-family: ui-monospace, 'SF Mono', 'Cascadia Code', monospace;
-  color: var(--text-primary);
-  opacity: 0.7;
-  background: rgba(0, 0, 0, 0.3);
-  padding: 1px 4px;
+  color: #a8a8c0;
+  background: rgba(255, 255, 255, 0.07);
+  padding: 2px 5px;
+  min-height: 16px;
   border-radius: 3px;
   white-space: nowrap;
   letter-spacing: 0.02em;
@@ -608,8 +609,8 @@ body {
 }
 
 .tl-chip-icon {
-  font-size: 7px;
-  opacity: 0.6;
+  font-size: 9px;
+  opacity: 0.7;
   flex-shrink: 0;
 }
 
