@@ -38,7 +38,7 @@ export default function Minimap({
 
   return (
     <div
-      className="relative h-5 cursor-pointer flex-shrink-0 border-b"
+      className="relative h-4 cursor-pointer flex-shrink-0 border-b"
       style={{
         backgroundColor: "var(--bg-tertiary)",
         borderColor: "var(--border)",

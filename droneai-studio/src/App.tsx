@@ -412,7 +412,7 @@ function App() {
   return (
     <div className="flex flex-col h-screen bg-[var(--bg-primary)]">
       {/* Workspace header */}
-      <div className="h-10 flex items-center justify-between px-4 border-b border-[var(--border)] flex-shrink-0">
+      <div className="h-8 flex items-center justify-between px-3 border-b border-[var(--border)] flex-shrink-0">
         <div className="flex items-center gap-3">
           <button
             onClick={handleBack}
@@ -438,7 +438,7 @@ function App() {
 
       {/* Main workspace */}
       <div className="flex flex-1 min-h-0">
-        <div className="w-[380px] min-w-[300px] border-r border-[var(--border)] flex flex-col">
+        <div className="w-[30%] min-w-[260px] max-w-[400px] border-r border-[var(--border)] flex flex-col">
           {!claude.isActive && screen === "workspace" && (
             <div className="px-4 py-2 bg-red-900/50 text-red-200 text-xs flex items-center justify-between">
               <span>Claude disconnected</span>

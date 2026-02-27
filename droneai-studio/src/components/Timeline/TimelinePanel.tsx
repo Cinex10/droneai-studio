@@ -15,9 +15,9 @@ interface TimelinePanelProps {
   onFrameChange: (frame: number) => void;
 }
 
-const MIN_HEIGHT = 64;
+const MIN_HEIGHT = 48;
 const MAX_HEIGHT = 350;
-const DEFAULT_HEIGHT = 140;
+const DEFAULT_HEIGHT = 110;
 
 export default function TimelinePanel({
   sceneData,

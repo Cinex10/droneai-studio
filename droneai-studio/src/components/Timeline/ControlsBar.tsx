@@ -46,7 +46,7 @@ export default function ControlsBar({
   ];
 
   return (
-    <div className="flex items-center h-7 px-3 gap-3 bg-[var(--bg-tertiary)] border-t border-[var(--border)] flex-shrink-0">
+    <div className="flex items-center h-6 px-2 gap-2.5 bg-[var(--bg-tertiary)] border-t border-[var(--border)] flex-shrink-0">
       {/* Play/Pause */}
       <button
         onClick={onPlayPause}

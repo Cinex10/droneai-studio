@@ -72,7 +72,7 @@ export default function Ruler({
   return (
     <div
       ref={ref}
-      className="relative h-5 bg-[var(--bg-secondary)] cursor-pointer select-none overflow-hidden"
+      className="relative h-4 bg-[var(--bg-secondary)] cursor-pointer select-none overflow-hidden"
       onClick={handleClick}
     >
       {/* Ticks */}
