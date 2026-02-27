@@ -88,12 +88,16 @@ impl BlenderProcess {
     }
 
     /// Launch Blender headless with the startup script and optional addon directory.
+    /// If `blend_file` is provided, Blender opens that .blend file on startup
+    /// (used when restoring a saved project — avoids the crash-prone
+    /// `bpy.ops.wm.open_mainfile()` via MCP).
     pub fn launch(
         &mut self,
         app: &tauri::AppHandle,
         startup_script: &str,
         addon_dir: Option<&str>,
         droneai_lib_dir: Option<&str>,
+        blend_file: Option<&str>,
     ) -> Result<u32, String> {
         // Kill tracked child from this session
         self.kill();
@@ -105,8 +109,13 @@ impl BlenderProcess {
             .ok_or_else(|| "Blender not found. Please install Blender 4.x or run scripts/prepare-blender.sh.".to_string())?;
 
         let mut cmd = Command::new(&blender_path);
-        // --addons must come before --python; args after --python are passed to the script.
-        cmd.args(["--background", "--addons", "addon", "--python", startup_script]);
+        // --background [file.blend] --addons addon --python startup_script
+        // The blend file must come right after --background.
+        cmd.arg("--background");
+        if let Some(bf) = blend_file {
+            cmd.arg(bf);
+        }
+        cmd.args(["--addons", "addon", "--python", startup_script]);
 
         // Point Blender at the bundled addon directory
         if let Some(dir) = addon_dir {

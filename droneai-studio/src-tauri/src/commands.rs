@@ -8,6 +8,7 @@ use tauri::State;
 
 use crate::blender::BlenderState;
 use crate::claude_code::ClaudeState;
+use crate::project::{ChatMessage as ProjectChatMessage, ProjectData, ProjectMetadata, ProjectState};
 
 /// Resolve a bundled resource by name.
 ///
@@ -110,6 +111,7 @@ pub fn get_blender_pid(blender: State<'_, BlenderState>) -> Option<u32> {
 #[tauri::command]
 pub fn launch_blender(
     blender: State<'_, BlenderState>,
+    project: State<'_, ProjectState>,
     app: tauri::AppHandle,
 ) -> Result<u32, String> {
     let mut blender = blender.lock().unwrap();
@@ -130,7 +132,17 @@ pub fn launch_blender(
         .ok()
         .and_then(|p| p.parent().map(|p| p.to_str().map(String::from)).flatten());
 
-    blender.launch(&app, script_path, addon_dir.as_deref(), droneai_lib_dir.as_deref())
+    // If a project is open and has a saved .blend file, pass it to Blender
+    // so the scene is loaded natively on startup (avoids crash-prone
+    // bpy.ops.wm.open_mainfile via MCP in headless mode).
+    let blend_file = {
+        let pm = project.lock().unwrap();
+        pm.blend_path()
+            .filter(|p| p.exists())
+            .and_then(|p| p.to_str().map(String::from))
+    };
+
+    blender.launch(&app, script_path, addon_dir.as_deref(), droneai_lib_dir.as_deref(), blend_file.as_deref())
 }
 
 #[tauri::command]
@@ -428,5 +440,149 @@ pub fn run_test_show(app: tauri::AppHandle) -> Result<String, String> {
         return Err(format!("Failed to create test show: {}", err));
     }
     Ok(format!("Test show response: {}", resp))
+}
+
+// --- Project commands ---
+
+#[tauri::command]
+pub fn create_project(
+    name: String,
+    project: State<'_, ProjectState>,
+) -> Result<ProjectMetadata, String> {
+    let mut pm = project.lock().unwrap();
+    pm.create(&name)
+}
+
+#[tauri::command]
+pub fn list_projects(
+    project: State<'_, ProjectState>,
+) -> Result<Vec<ProjectMetadata>, String> {
+    let pm = project.lock().unwrap();
+    pm.list()
+}
+
+#[tauri::command]
+pub fn open_project(
+    id: String,
+    project: State<'_, ProjectState>,
+) -> Result<ProjectData, String> {
+    let mut pm = project.lock().unwrap();
+    pm.open(&id)
+}
+
+#[tauri::command]
+pub fn save_project(
+    chat: Vec<ProjectChatMessage>,
+    spec: Option<serde_json::Value>,
+    build_result: Option<serde_json::Value>,
+    project: State<'_, ProjectState>,
+) -> Result<(), String> {
+    let mut pm = project.lock().unwrap();
+
+    // Save .blend file via Blender
+    if let Some(blend_path) = pm.blend_path() {
+        eprintln!("[save_project] Saving .blend to: {}", blend_path.display());
+        let code = format!(
+            "import bpy; bpy.ops.wm.save_as_mainfile(filepath=r'{}')",
+            blend_path.display()
+        );
+        let payload = serde_json::json!({
+            "type": "execute_code",
+            "params": { "code": code }
+        });
+        match blender_mcp_call(&payload) {
+            Ok(resp) => eprintln!("[save_project] Blend save response: {}", resp),
+            Err(e) => eprintln!("[save_project] WARNING: Blend save failed: {}", e),
+        }
+    } else {
+        eprintln!("[save_project] No blend path (no current project?)");
+    }
+
+    pm.save(chat, spec, build_result)
+}
+
+#[tauri::command]
+pub fn delete_project(
+    id: String,
+    project: State<'_, ProjectState>,
+) -> Result<(), String> {
+    let mut pm = project.lock().unwrap();
+    pm.delete(&id)
+}
+
+#[tauri::command]
+pub fn rename_project(
+    id: String,
+    name: String,
+    project: State<'_, ProjectState>,
+) -> Result<(), String> {
+    let mut pm = project.lock().unwrap();
+    pm.rename(&id, &name)
+}
+
+#[tauri::command]
+pub fn is_project_dirty(
+    project: State<'_, ProjectState>,
+) -> bool {
+    let pm = project.lock().unwrap();
+    pm.is_dirty()
+}
+
+#[tauri::command]
+pub fn mark_dirty(
+    project: State<'_, ProjectState>,
+) {
+    let mut pm = project.lock().unwrap();
+    pm.mark_dirty();
+}
+
+#[tauri::command]
+pub fn get_current_project_name(
+    project: State<'_, ProjectState>,
+) -> Option<String> {
+    let pm = project.lock().unwrap();
+    pm.current_name()
+}
+
+#[tauri::command]
+pub fn force_close(window: tauri::Window) {
+    window.destroy().ok();
+}
+
+#[tauri::command]
+pub fn restore_blender_scene(
+    project: State<'_, ProjectState>,
+) -> Result<String, String> {
+    let pm = project.lock().unwrap();
+    if let Some(blend_path) = pm.blend_path() {
+        eprintln!("[restore_blender_scene] blend_path: {}", blend_path.display());
+        if blend_path.exists() {
+            let code = format!(
+                "import bpy; bpy.ops.wm.open_mainfile(filepath=r'{}')",
+                blend_path.display()
+            );
+            let payload = serde_json::json!({
+                "type": "execute_code",
+                "params": { "code": code }
+            });
+            let resp = blender_mcp_call(&payload)?;
+            eprintln!("[restore_blender_scene] Blender response: {}", resp);
+            return Ok(format!("Restored from {}", blend_path.display()));
+        } else {
+            eprintln!("[restore_blender_scene] File does NOT exist: {}", blend_path.display());
+            return Ok("No .blend file found — nothing to restore".to_string());
+        }
+    }
+    eprintln!("[restore_blender_scene] No current project");
+    Ok("No current project".to_string())
+}
+
+#[tauri::command]
+pub fn restore_chat(
+    messages: Vec<ProjectChatMessage>,
+    claude: State<'_, ClaudeState>,
+) -> Result<(), String> {
+    let mut session = claude.lock().unwrap();
+    session.restore_conversation(&messages)
 }
 
