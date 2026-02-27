@@ -218,7 +218,7 @@ body {
   color: #7878a0;
   letter-spacing: 0.02em;
   white-space: nowrap;
-  text-align: left;
+  text-align: right;
 }
 
 .hud-value {
@@ -227,7 +227,7 @@ body {
   font-weight: 500;
   color: var(--text-primary);
   white-space: nowrap;
-  text-align: right;
+  text-align: left;
 }
 
 .hud-badge {
