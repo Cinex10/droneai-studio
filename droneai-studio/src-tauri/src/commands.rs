@@ -553,3 +553,12 @@ pub fn restore_blender_scene(
     Ok(())
 }
 
+#[tauri::command]
+pub fn restore_chat(
+    messages: Vec<ProjectChatMessage>,
+    claude: State<'_, ClaudeState>,
+) -> Result<(), String> {
+    let mut session = claude.lock().unwrap();
+    session.restore_conversation(&messages)
+}
+

@@ -57,6 +57,7 @@ pub fn run() {
             commands::get_current_project_name,
             commands::force_close,
             commands::restore_blender_scene,
+            commands::restore_chat,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

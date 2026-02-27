@@ -113,6 +113,36 @@ impl ClaudeSession {
         Ok(())
     }
 
+    /// Restore conversation history from a saved project.
+    /// Sends a single context message so Claude is aware of the prior conversation.
+    pub fn restore_conversation(&mut self, messages: &[crate::project::ChatMessage]) -> Result<(), String> {
+        let stdin = self.stdin.as_mut().ok_or("No active session")?;
+
+        // Build a summary of the conversation history
+        let mut history = String::from("[The following is a restored conversation from a previously saved project session. Use this as context for continuing the conversation.]\n\n");
+        for msg in messages {
+            if msg.id == "welcome" {
+                continue;
+            }
+            let role_label = if msg.role == "user" { "User" } else { "Assistant" };
+            history.push_str(&format!("{}: {}\n\n", role_label, msg.content));
+        }
+        history.push_str("[End of restored conversation. The user may now continue where they left off.]");
+
+        let json_msg = serde_json::json!({
+            "type": "user",
+            "message": {
+                "role": "user",
+                "content": history
+            }
+        });
+        writeln!(stdin, "{}", json_msg)
+            .map_err(|e| format!("Failed to write history: {}", e))?;
+        stdin.flush()
+            .map_err(|e| format!("Failed to flush: {}", e))?;
+        Ok(())
+    }
+
     /// Stop the Claude Code session.
     pub fn stop(&mut self) {
         self.stdin = None;
