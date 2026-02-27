@@ -2,7 +2,6 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import type { SceneData } from "../../types/scene";
 import type { ShowInfo, TimelineLayerVisibility } from "./types";
-import Minimap from "./Minimap";
 import Ruler from "./Ruler";
 import FormationTrack from "./FormationTrack";
 import ColorTrack from "./ColorTrack";
@@ -15,9 +14,10 @@ interface TimelinePanelProps {
   onFrameChange: (frame: number) => void;
 }
 
-const MIN_HEIGHT = 44;
-const MAX_HEIGHT = 350;
-const DEFAULT_HEIGHT = 120;
+const MIN_HEIGHT = 80;
+const MAX_HEIGHT = 400;
+const DEFAULT_HEIGHT = 160;
+const GUTTER_WIDTH = 72;
 
 export default function TimelinePanel({
   sceneData,
@@ -30,7 +30,7 @@ export default function TimelinePanel({
   const [currentFrame, setCurrentFrame] = useState(0);
   const [speed, setSpeed] = useState(1);
   const [zoom, setZoom] = useState(1);
-  const [scrollOffset, setScrollOffset] = useState(0);
+  const [scrollOffset] = useState(0);
   const [layers, setLayers] = useState<TimelineLayerVisibility>({
     minimap: true,
     droneCount: true,
@@ -131,6 +131,11 @@ export default function TimelinePanel({
     setLayers((prev) => ({ ...prev, [key]: !prev[key] }));
   };
 
+  // Playhead position as percentage in the track area
+  const playheadPct = totalFrames > 0
+    ? ((currentFrame / totalFrames) * 100 * zoom) - scrollOffset
+    : 0;
+
   if (!hasShow) {
     return (
       <div className="h-8 flex items-center justify-center bg-[var(--bg-secondary)] border-t border-[var(--border)]">
@@ -141,62 +146,17 @@ export default function TimelinePanel({
 
   return (
     <div
-      className="border-t border-[var(--border)] flex flex-col bg-[var(--bg-secondary)]"
+      className="tl-panel border-t border-[var(--border)] flex flex-col"
       style={{ height }}
       onWheel={handleWheel}
     >
       {/* Resize handle */}
       <div
-        className="h-1 cursor-ns-resize hover:bg-[var(--accent)]/30 transition-colors flex-shrink-0"
+        className="tl-resize-handle"
         onMouseDown={handleResizeStart}
       />
 
-      {/* Minimap scrubber */}
-      {layers.minimap && entries.length > 0 && (
-        <Minimap
-          entries={entries}
-          totalFrames={totalFrames}
-          fps={fps}
-          zoom={zoom}
-          scrollOffset={scrollOffset}
-          currentFrame={currentFrame}
-          onNavigate={setScrollOffset}
-        />
-      )}
-
-      {/* Ruler */}
-      <Ruler
-        totalFrames={totalFrames}
-        currentFrame={currentFrame}
-        fps={fps}
-        zoom={zoom}
-        scrollOffset={scrollOffset}
-        onSeek={handleSeek}
-      />
-
-      {/* Formation track (takes remaining space) */}
-      {layers.formations && entries.length > 0 && (
-        <FormationTrack
-          entries={entries}
-          totalFrames={totalFrames}
-          fps={fps}
-          zoom={zoom}
-          scrollOffset={scrollOffset}
-        />
-      )}
-
-      {/* Color gradient strip */}
-      {layers.color && entries.length > 0 && (
-        <ColorTrack
-          entries={entries}
-          totalFrames={totalFrames}
-          fps={fps}
-          zoom={zoom}
-          scrollOffset={scrollOffset}
-        />
-      )}
-
-      {/* Controls */}
+      {/* Toolbar */}
       <ControlsBar
         isPlaying={isPlaying}
         onPlayPause={() => setIsPlaying(!isPlaying)}
@@ -208,7 +168,75 @@ export default function TimelinePanel({
         hasShow={hasShow}
         layers={layers}
         onToggleLayer={toggleLayer}
+        zoom={zoom}
+        onZoomChange={setZoom}
       />
+
+      {/* Track area: gutter + lanes + playhead */}
+      <div className="flex flex-1 min-h-0 overflow-hidden relative">
+        {/* Left gutter */}
+        <div className="tl-gutter" style={{ width: GUTTER_WIDTH }}>
+          {/* Ruler spacer */}
+          <div className="tl-gutter-spacer" />
+          {/* Formation label */}
+          {layers.formations && entries.length > 0 && (
+            <div className="tl-gutter-label">
+              <span className="tl-gutter-icon">⊞</span>
+              <span className="tl-gutter-text">Form</span>
+            </div>
+          )}
+          {/* Color label */}
+          {layers.color && entries.length > 0 && (
+            <div className="tl-gutter-label">
+              <span className="tl-gutter-icon">◈</span>
+              <span className="tl-gutter-text">Color</span>
+            </div>
+          )}
+        </div>
+
+        {/* Main track lanes */}
+        <div className="flex-1 flex flex-col min-w-0 min-h-0 relative">
+          {/* Ruler */}
+          <Ruler
+            totalFrames={totalFrames}
+            currentFrame={currentFrame}
+            fps={fps}
+            zoom={zoom}
+            scrollOffset={scrollOffset}
+            onSeek={handleSeek}
+          />
+
+          {/* Formation track */}
+          {layers.formations && entries.length > 0 && (
+            <FormationTrack
+              entries={entries}
+              totalFrames={totalFrames}
+              fps={fps}
+              zoom={zoom}
+              scrollOffset={scrollOffset}
+            />
+          )}
+
+          {/* Color track */}
+          {layers.color && entries.length > 0 && (
+            <ColorTrack
+              entries={entries}
+              totalFrames={totalFrames}
+              fps={fps}
+              zoom={zoom}
+              scrollOffset={scrollOffset}
+            />
+          )}
+
+          {/* Playhead — vertical line spanning all tracks */}
+          {playheadPct >= 0 && playheadPct <= 100 * zoom && (
+            <div
+              className="tl-playhead"
+              style={{ left: `${playheadPct}%` }}
+            />
+          )}
+        </div>
+      </div>
     </div>
   );
 }
