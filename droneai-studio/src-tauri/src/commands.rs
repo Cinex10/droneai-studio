@@ -532,3 +532,24 @@ pub fn force_close(window: tauri::Window) {
     window.destroy().ok();
 }
 
+#[tauri::command]
+pub fn restore_blender_scene(
+    project: State<'_, ProjectState>,
+) -> Result<(), String> {
+    let pm = project.lock().unwrap();
+    if let Some(blend_path) = pm.blend_path() {
+        if blend_path.exists() {
+            let code = format!(
+                "import bpy; bpy.ops.wm.open_mainfile(filepath=r'{}')",
+                blend_path.display()
+            );
+            let payload = serde_json::json!({
+                "type": "execute_code",
+                "params": { "code": code }
+            });
+            blender_mcp_call(&payload)?;
+        }
+    }
+    Ok(())
+}
+
