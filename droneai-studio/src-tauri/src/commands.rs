@@ -111,6 +111,7 @@ pub fn get_blender_pid(blender: State<'_, BlenderState>) -> Option<u32> {
 #[tauri::command]
 pub fn launch_blender(
     blender: State<'_, BlenderState>,
+    project: State<'_, ProjectState>,
     app: tauri::AppHandle,
 ) -> Result<u32, String> {
     let mut blender = blender.lock().unwrap();
@@ -131,7 +132,17 @@ pub fn launch_blender(
         .ok()
         .and_then(|p| p.parent().map(|p| p.to_str().map(String::from)).flatten());
 
-    blender.launch(&app, script_path, addon_dir.as_deref(), droneai_lib_dir.as_deref())
+    // If a project is open and has a saved .blend file, pass it to Blender
+    // so the scene is loaded natively on startup (avoids crash-prone
+    // bpy.ops.wm.open_mainfile via MCP in headless mode).
+    let blend_file = {
+        let pm = project.lock().unwrap();
+        pm.blend_path()
+            .filter(|p| p.exists())
+            .and_then(|p| p.to_str().map(String::from))
+    };
+
+    blender.launch(&app, script_path, addon_dir.as_deref(), droneai_lib_dir.as_deref(), blend_file.as_deref())
 }
 
 #[tauri::command]

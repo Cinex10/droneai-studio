@@ -8,6 +8,7 @@ import TimelineBar from "./components/TimelineBar";
 import SetupScreen from "./components/SetupScreen";
 import ProjectPicker from "./components/ProjectPicker";
 import CloseDialog from "./components/CloseDialog";
+import ViewportLoader from "./components/ViewportLoader";
 import { useClaude } from "./hooks/useClaude";
 import { useSceneData } from "./hooks/useSceneData";
 import { useProject } from "./hooks/useProject";
@@ -34,10 +35,18 @@ function App() {
     "close" | "back" | null
   >(null);
   const [isExistingProject, setIsExistingProject] = useState(false);
+  const [isRestoring, setIsRestoring] = useState(false);
 
   const claude = useClaude();
   const { sceneData, refreshScene } = useSceneData();
   const project = useProject();
+
+  // --- Clear restore loader once scene has drones ---
+  useEffect(() => {
+    if (isRestoring && sceneData?.drones && sceneData.drones.length > 0) {
+      setIsRestoring(false);
+    }
+  }, [isRestoring, sceneData]);
 
   // --- Dirty tracking ---
   const markDirtyRef = useRef(project.markDirty);
@@ -178,6 +187,7 @@ function App() {
     setBlenderRunning(false);
     setCurrentFrame(0);
     setIsExistingProject(false);
+    setIsRestoring(false);
   };
 
   // --- Back to picker ---
@@ -351,13 +361,9 @@ function App() {
       <SetupScreen
         onReady={async () => {
           if (isExistingProject) {
-            // Restore Blender scene from saved .blend file
-            try {
-              const result = await invoke<string>("restore_blender_scene");
-              console.log("[App] restore_blender_scene:", result);
-            } catch (e) {
-              console.error("[App] Failed to restore Blender scene:", e);
-            }
+            // Scene restore is handled by launch_blender — it passes the
+            // saved .blend file to Blender's CLI so it loads natively on
+            // startup (no crash-prone bpy.ops.wm.open_mainfile via MCP).
             // Restore Claude conversation context
             try {
               const chatForRestore: ProjectChatMessage[] = messages.map((m) => ({
@@ -371,15 +377,13 @@ function App() {
             } catch (e) {
               console.error("[App] Failed to restore chat:", e);
             }
-          } else {
-            console.log("[App] New project — skipping restore");
           }
+          setIsRestoring(true);
           setScreen("workspace");
-          // Refresh viewport aggressively — retry until drones appear or timeout
+          // Refresh viewport — retry until drones appear or timeout
           let attempts = 0;
           const poll = setInterval(async () => {
             attempts++;
-            console.log(`[App] Scene refresh attempt ${attempts}`);
             await refreshScene();
             if (attempts >= 5) clearInterval(poll);
           }, 2000);
@@ -438,8 +442,9 @@ function App() {
           />
         </div>
         <div className="flex-1 flex flex-col">
-          <div className="flex-1">
+          <div className="flex-1 relative">
             <DroneViewport sceneData={sceneData} currentFrame={currentFrame} />
+            <ViewportLoader visible={isRestoring} />
           </div>
           <div className="h-12 border-t border-[var(--border)]">
             <TimelineBar
