@@ -33,6 +33,7 @@ function App() {
   const [pendingAction, setPendingAction] = useState<
     "close" | "back" | null
   >(null);
+  const [isExistingProject, setIsExistingProject] = useState(false);
 
   const claude = useClaude();
   const { sceneData, refreshScene } = useSceneData();
@@ -176,6 +177,7 @@ function App() {
     setIsLoading(false);
     setBlenderRunning(false);
     setCurrentFrame(0);
+    setIsExistingProject(false);
   };
 
   // --- Back to picker ---
@@ -202,6 +204,7 @@ function App() {
   const handleCreateProject = useCallback(
     async (name: string) => {
       await project.createProject(name);
+      setIsExistingProject(false);
       setScreen("setup");
     },
     [project],
@@ -223,6 +226,7 @@ function App() {
       } else {
         setMessages([WELCOME_MESSAGE]);
       }
+      setIsExistingProject(data.chat.length > 0);
       setScreen("setup");
     },
     [project],
@@ -344,7 +348,33 @@ function App() {
 
   if (screen === "setup") {
     return (
-      <SetupScreen onReady={() => setScreen("workspace")} />
+      <SetupScreen
+        onReady={async () => {
+          if (isExistingProject) {
+            // Restore Blender scene from saved .blend file
+            try {
+              await invoke("restore_blender_scene");
+            } catch (e) {
+              console.error("Failed to restore Blender scene:", e);
+            }
+            // Restore Claude conversation context
+            try {
+              const chatForRestore: ProjectChatMessage[] = messages.map((m) => ({
+                id: m.id,
+                role: m.role,
+                content: m.content,
+                timestamp: m.timestamp,
+              }));
+              await invoke("restore_chat", { messages: chatForRestore });
+            } catch (e) {
+              console.error("Failed to restore chat:", e);
+            }
+            // Refresh viewport after scene restore
+            setTimeout(() => refreshScene(), 1000);
+          }
+          setScreen("workspace");
+        }}
+      />
     );
   }
 
