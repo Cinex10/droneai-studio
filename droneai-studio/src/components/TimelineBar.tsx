@@ -78,7 +78,7 @@ export default function TimelineBar({ blenderRunning, onFrameChange, sceneData }
     return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
   };
 
-  const hasShow = totalFrames > 0;
+  const hasShow = totalFrames > 0 && (sceneData?.drones?.length ?? 0) > 0;
 
   return (
     <div className="flex items-center h-full px-4 gap-3 bg-[var(--bg-secondary)]">
