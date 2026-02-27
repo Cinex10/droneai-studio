@@ -6,33 +6,38 @@ interface SetupScreenProps {
   onReady: () => void;
 }
 
-interface CheckResult {
-  blender: boolean;
-  claude: boolean;
-}
+type BlenderStatus = "stopped" | "starting" | "running";
 
 export default function SetupScreen({ onReady }: SetupScreenProps) {
-  const [checks, setChecks] = useState<CheckResult>({ blender: false, claude: false });
+  const [blenderStatus, setBlenderStatus] = useState<BlenderStatus>("stopped");
+  const [claudeReady, setClaudeReady] = useState(false);
   const [launching, setLaunching] = useState<string | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const runChecks = useCallback(async () => {
     try {
-      const blenderStatus = await invoke<string>("get_blender_status");
-      const claudeStatus = await invoke<string>("get_claude_status");
-      const result = {
-        blender: blenderStatus === "running",
-        claude: claudeStatus === "active",
-      };
-      setChecks(result);
-      return result;
+      const bs = await invoke<string>("get_blender_status");
+      const cs = await invoke<string>("get_claude_status");
+
+      const blender: BlenderStatus =
+        bs === "running" ? "running" : bs === "starting" ? "starting" : "stopped";
+      const claude = cs === "active";
+
+      setBlenderStatus(blender);
+      setClaudeReady(claude);
+      return { blender, claude };
     } catch {
-      return { blender: false, claude: false };
+      return { blender: "stopped" as BlenderStatus, claude: false };
     }
   }, []);
 
+  // Initial check + auto-poll when Blender is starting (process alive, MCP not ready)
   useEffect(() => {
-    runChecks();
+    runChecks().then(({ blender }) => {
+      if (blender === "starting") {
+        startPolling("blender");
+      }
+    });
   }, [runChecks]);
 
   // Stop polling on unmount
@@ -46,7 +51,7 @@ export default function SetupScreen({ onReady }: SetupScreenProps) {
     if (pollRef.current) clearInterval(pollRef.current);
     pollRef.current = setInterval(async () => {
       const result = await runChecks();
-      if (target === "blender" && result.blender) {
+      if (target === "blender" && result.blender === "running") {
         setLaunching(null);
         if (pollRef.current) clearInterval(pollRef.current);
       } else if (target === "claude" && result.claude) {
@@ -60,7 +65,7 @@ export default function SetupScreen({ onReady }: SetupScreenProps) {
     try {
       setLaunching("blender");
       await invoke("launch_blender");
-      // Blender takes ~2s to start MCP server, poll until ready
+      // Blender takes ~5-10s to start MCP server, poll until ready
       startPolling("blender");
     } catch (e) {
       setLaunching(null);
@@ -72,13 +77,15 @@ export default function SetupScreen({ onReady }: SetupScreenProps) {
     try {
       setLaunching("claude");
       await invoke("new_chat");
-      // Give Claude a moment to start, then poll
       startPolling("claude");
     } catch (e) {
       setLaunching(null);
       console.error("Failed to start Claude:", e);
     }
   };
+
+  const blenderReady = blenderStatus === "running";
+  const blenderAlive = blenderStatus !== "stopped";
 
   return (
     <div className="h-screen flex items-center justify-center bg-[var(--bg-primary)]">
@@ -96,18 +103,23 @@ export default function SetupScreen({ onReady }: SetupScreenProps) {
             <div>
               <p className="text-sm font-medium text-[var(--text-primary)]">Blender 4.x</p>
               <p className="text-xs text-[var(--text-secondary)]">
-                {checks.blender ? "Running" : launching === "blender" ? "Starting..." : "Not detected"}
+                {blenderReady
+                  ? "Running"
+                  : blenderAlive || launching === "blender"
+                    ? "Initializing MCP server..."
+                    : "Not detected"}
               </p>
             </div>
-            {checks.blender ? (
+            {blenderReady ? (
               <span className="text-green-400 text-sm">Ready</span>
+            ) : blenderAlive || launching === "blender" ? (
+              <span className="text-yellow-400 text-sm animate-pulse">Starting...</span>
             ) : (
               <button
                 onClick={handleLaunchBlender}
-                disabled={launching === "blender"}
-                className="px-3 py-1 bg-[var(--accent)] text-white text-sm rounded hover:bg-[var(--accent-hover)] disabled:opacity-50"
+                className="px-3 py-1 bg-[var(--accent)] text-white text-sm rounded hover:bg-[var(--accent-hover)]"
               >
-                {launching === "blender" ? "Starting..." : "Launch"}
+                Launch
               </button>
             )}
           </div>
@@ -117,10 +129,10 @@ export default function SetupScreen({ onReady }: SetupScreenProps) {
             <div>
               <p className="text-sm font-medium text-[var(--text-primary)]">Claude Code</p>
               <p className="text-xs text-[var(--text-secondary)]">
-                {checks.claude ? "Connected" : launching === "claude" ? "Connecting..." : "Not connected"}
+                {claudeReady ? "Connected" : launching === "claude" ? "Connecting..." : "Not connected"}
               </p>
             </div>
-            {checks.claude ? (
+            {claudeReady ? (
               <span className="text-green-400 text-sm">Ready</span>
             ) : (
               <button
@@ -134,7 +146,7 @@ export default function SetupScreen({ onReady }: SetupScreenProps) {
           </div>
         </div>
 
-        {checks.blender && checks.claude && (
+        {blenderReady && claudeReady && (
           <button
             onClick={onReady}
             className="w-full mt-6 px-4 py-2 bg-[var(--accent)] text-white rounded-lg font-medium hover:bg-[var(--accent-hover)]"
