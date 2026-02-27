@@ -586,3 +586,26 @@ pub fn restore_chat(
     session.restore_conversation(&messages)
 }
 
+#[derive(serde::Serialize)]
+pub struct ShowInfo {
+    pub spec: Option<serde_json::Value>,
+    pub safety: Option<serde_json::Value>,
+}
+
+#[tauri::command]
+pub fn get_show_info(
+    project: State<'_, ProjectState>,
+) -> ShowInfo {
+    let pm = project.lock().unwrap();
+    match &pm.current {
+        Some(project) => ShowInfo {
+            spec: project.spec.clone(),
+            safety: project.build_result.as_ref().and_then(|br| br.get("safety").cloned()),
+        },
+        None => ShowInfo {
+            spec: None,
+            safety: None,
+        },
+    }
+}
+
