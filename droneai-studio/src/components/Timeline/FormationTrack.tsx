@@ -8,7 +8,6 @@ interface FormationTrackProps {
   scrollOffset: number;
 }
 
-// Shape glyphs — tiny geometric hints for each formation type
 const SHAPE_GLYPHS: Record<string, string> = {
   grid: "⊞",
   circle: "◎",
@@ -49,63 +48,67 @@ export default function FormationTrack({
         const hold = entry.hold ?? 0;
         const nextTime = i < entries.length - 1 ? entries[i + 1].time : totalSeconds;
         const holdEnd = hold > 0 ? entry.time + hold : entry.time;
+        const hasTransition = i < entries.length - 1 && holdEnd < nextTime;
         const shapeName = entry.formation.shape || entry.formation.type;
         const glyph = SHAPE_GLYPHS[shapeName] ?? "◇";
         const ledColor = colorToCSS(entry.color);
 
-        // The full clip spans from entry.time to nextTime
-        const clipLeft = timeToPct(entry.time);
-        const clipWidth = timeToPct(nextTime) - clipLeft;
+        // Formation block: entry.time → holdEnd (solid)
+        // If no hold, use a minimum visual width up to nextTime
+        const formEnd = hold > 0 ? holdEnd : Math.min(entry.time + 1.5, nextTime);
+        const formLeft = timeToPct(entry.time);
+        const formWidth = timeToPct(formEnd) - formLeft;
 
-        // Hold portion as a fraction of the clip
-        const holdFraction = hold > 0 ? (holdEnd - entry.time) / (nextTime - entry.time) : 0;
+        // Transition block: holdEnd → nextTime (dimmer, different style)
+        const transLeft = timeToPct(holdEnd > entry.time ? holdEnd : formEnd);
+        const transWidth = timeToPct(nextTime) - transLeft;
 
         return (
-          <div
-            key={i}
-            className="tl-clip"
-            style={{
-              left: `${clipLeft}%`,
-              width: `${clipWidth}%`,
-            }}
-          >
-            {/* Hold portion — bright solid */}
-            {holdFraction > 0 && (
-              <div
-                className="tl-clip-hold"
-                style={{
-                  width: `${holdFraction * 100}%`,
-                  background: colorToRGBA(entry.color, 0.45),
-                }}
-              />
-            )}
-
-            {/* Transition portion — dimmer gradient */}
+          <div key={i}>
+            {/* Formation block — solid colored */}
             <div
-              className="tl-clip-body"
+              className="tl-clip"
               style={{
-                width: holdFraction > 0 ? `${(1 - holdFraction) * 100}%` : "100%",
-                background: holdFraction > 0
-                  ? `linear-gradient(to right, ${colorToRGBA(entry.color, 0.3)}, ${
-                      i < entries.length - 1
-                        ? colorToRGBA(entries[i + 1].color, 0.18)
-                        : colorToRGBA(entry.color, 0.12)
-                    })`
-                  : colorToRGBA(entry.color, 0.35),
+                left: `${formLeft}%`,
+                width: `${formWidth}%`,
               }}
-            />
-
-            {/* Left accent edge */}
-            <div
-              className="tl-clip-edge"
-              style={{ background: ledColor }}
-            />
-
-            {/* Label overlay */}
-            <div className="tl-clip-label">
-              <span className="tl-clip-glyph" style={{ color: ledColor }}>{glyph}</span>
-              <span className="tl-clip-name">{shapeName}</span>
+            >
+              <div
+                className="tl-clip-fill"
+                style={{ background: colorToRGBA(entry.color, 0.4) }}
+              />
+              <div
+                className="tl-clip-edge"
+                style={{ background: ledColor }}
+              />
+              <div className="tl-clip-label">
+                <span className="tl-clip-glyph" style={{ color: ledColor }}>{glyph}</span>
+                <span className="tl-clip-name">{shapeName}</span>
+              </div>
             </div>
+
+            {/* Transition zone — distinct visual */}
+            {hasTransition && transWidth > 0 && (
+              <div
+                className="tl-transition"
+                style={{
+                  left: `${transLeft}%`,
+                  width: `${transWidth}%`,
+                }}
+              >
+                {/* Gradient from current to next color */}
+                <div
+                  className="tl-transition-fill"
+                  style={{
+                    background: `linear-gradient(to right, ${colorToRGBA(entry.color, 0.15)}, ${
+                      colorToRGBA(entries[i + 1].color, 0.15)
+                    })`,
+                  }}
+                />
+                {/* Diagonal stripes to mark transition */}
+                <div className="tl-transition-stripes" />
+              </div>
+            )}
           </div>
         );
       })}

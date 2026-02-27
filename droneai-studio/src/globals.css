@@ -390,9 +390,20 @@ body {
   align-items: center;
   gap: 4px;
   padding: 0 8px;
-  flex: 1;
   min-height: 0;
   border-bottom: 1px solid rgba(42, 42, 58, 0.5);
+}
+
+/* Mirror exact flex sizing of corresponding tracks */
+.tl-gutter-label-form {
+  flex: 1;
+  min-height: 24px;
+}
+.tl-gutter-label-color {
+  flex: 0 0 auto;
+  max-height: 20px;
+  min-height: 16px;
+  height: 20px;
 }
 
 .tl-gutter-icon {
@@ -497,25 +508,19 @@ body {
 
 /* ---- Formation clips ---- */
 
+/* Formation clip — solid block */
 .tl-clip {
   position: absolute;
-  top: 2px;
-  bottom: 2px;
-  display: flex;
-  border-radius: 3px;
+  top: 3px;
+  bottom: 3px;
+  border-radius: 4px;
   overflow: hidden;
   min-width: 4px;
 }
 
-.tl-clip-hold {
-  flex-shrink: 0;
-  height: 100%;
-}
-
-.tl-clip-body {
-  flex: 1;
-  min-width: 0;
-  height: 100%;
+.tl-clip-fill {
+  position: absolute;
+  inset: 0;
 }
 
 .tl-clip-edge {
@@ -523,8 +528,8 @@ body {
   left: 0;
   top: 0;
   bottom: 0;
-  width: 2px;
-  border-radius: 3px 0 0 3px;
+  width: 3px;
+  border-radius: 4px 0 0 4px;
 }
 
 .tl-clip-label {
@@ -532,30 +537,56 @@ body {
   inset: 0;
   display: flex;
   align-items: center;
-  gap: 4px;
-  padding: 0 6px 0 7px;
+  gap: 5px;
+  padding: 0 8px 0 9px;
   pointer-events: none;
   overflow: hidden;
 }
 
 .tl-clip-glyph {
-  font-size: 10px;
+  font-size: 11px;
   flex-shrink: 0;
   line-height: 1;
 }
 
 .tl-clip-name {
-  font-size: 9px;
+  font-size: 10px;
   font-family: ui-monospace, 'SF Mono', 'Cascadia Code', monospace;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.06em;
   color: var(--text-primary);
-  opacity: 0.85;
+  opacity: 0.9;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.7);
+}
+
+/* Transition zone — visually distinct from formation */
+.tl-transition {
+  position: absolute;
+  top: 3px;
+  bottom: 3px;
+  overflow: hidden;
+  border-radius: 2px;
+}
+
+.tl-transition-fill {
+  position: absolute;
+  inset: 0;
+}
+
+.tl-transition-stripes {
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    -55deg,
+    transparent,
+    transparent 3px,
+    rgba(255, 255, 255, 0.03) 3px,
+    rgba(255, 255, 255, 0.03) 4px
+  );
 }
 
 /* ---- Color blocks ---- */

@@ -178,16 +178,16 @@ export default function TimelinePanel({
         <div className="tl-gutter" style={{ width: GUTTER_WIDTH }}>
           {/* Ruler spacer */}
           <div className="tl-gutter-spacer" />
-          {/* Formation label */}
+          {/* Formation label — must match .tl-track flex sizing */}
           {layers.formations && entries.length > 0 && (
-            <div className="tl-gutter-label">
+            <div className="tl-gutter-label tl-gutter-label-form">
               <span className="tl-gutter-icon">⊞</span>
               <span className="tl-gutter-text">Form</span>
             </div>
           )}
-          {/* Color label */}
+          {/* Color label — must match .tl-track-color flex sizing */}
           {layers.color && entries.length > 0 && (
-            <div className="tl-gutter-label">
+            <div className="tl-gutter-label tl-gutter-label-color">
               <span className="tl-gutter-icon">◈</span>
               <span className="tl-gutter-text">Color</span>
             </div>
