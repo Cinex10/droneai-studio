@@ -527,3 +527,8 @@ pub fn get_current_project_name(
     pm.current_name()
 }
 
+#[tauri::command]
+pub fn force_close(window: tauri::Window) {
+    window.destroy().ok();
+}
+

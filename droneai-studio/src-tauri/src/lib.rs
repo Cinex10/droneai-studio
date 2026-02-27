@@ -21,6 +21,15 @@ pub fn run() {
                 .app_data_dir()
                 .expect("Failed to get app data dir");
             app.manage(Mutex::new(ProjectManager::new(data_dir)));
+
+            // Prevent window close — frontend handles dirty check via CloseDialog
+            let window = app.get_webview_window("main").unwrap();
+            window.on_window_event(move |event| {
+                if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+                    api.prevent_close();
+                }
+            });
+
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -43,6 +52,7 @@ pub fn run() {
             commands::is_project_dirty,
             commands::mark_dirty,
             commands::get_current_project_name,
+            commands::force_close,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
