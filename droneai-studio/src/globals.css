@@ -109,6 +109,136 @@ body {
   background: rgba(255, 255, 255, 0.05);
 }
 
+/* ============================================================
+   App Header — Canva-inspired toolbar
+   ============================================================ */
+
+.app-header {
+  height: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 10px;
+  background: #101018;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+  gap: 8px;
+}
+
+.app-header-left,
+.app-header-right {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.app-header-center {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  min-width: 0;
+}
+
+.app-header-project {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 260px;
+  letter-spacing: 0.01em;
+}
+
+.app-header-dirty {
+  color: var(--text-secondary);
+  margin-left: 2px;
+}
+
+.app-header-logo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  border-radius: 6px;
+  padding: 0;
+  transition: opacity 0.15s;
+}
+.app-header-logo:hover {
+  opacity: 0.8;
+}
+
+.app-header-icon-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: color 0.12s, background 0.12s;
+}
+.app-header-icon-btn:hover:not(:disabled) {
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.06);
+}
+.app-header-icon-btn:disabled {
+  opacity: 0.25;
+  cursor: default;
+}
+.app-header-icon-btn.active {
+  color: var(--accent);
+  background: rgba(99, 102, 241, 0.1);
+}
+
+.app-header-export-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 30px;
+  padding: 0 14px;
+  border: none;
+  background: var(--accent);
+  color: white;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.15s;
+  white-space: nowrap;
+}
+.app-header-export-btn:hover {
+  background: var(--accent-hover);
+}
+
+.app-header-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 600;
+  color: white;
+  cursor: pointer;
+  margin-left: 4px;
+  transition: box-shadow 0.15s;
+}
+.app-header-avatar:hover {
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.4);
+}
+
 /* --- Viewport loader --- */
 
 .viewport-loader {

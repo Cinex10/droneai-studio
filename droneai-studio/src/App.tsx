@@ -440,42 +440,77 @@ function App() {
   return (
     <div className="flex flex-col h-screen bg-[var(--bg-primary)] overflow-hidden">
       {/* Workspace header */}
-      <div className="h-9 flex items-center justify-between px-3 border-b border-[var(--border)] flex-shrink-0 bg-[var(--bg-secondary)]">
-        <div className="flex items-center gap-2">
-          <button
-            onClick={handleBack}
-            className="text-[11px] text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors"
-          >
-            &larr; Projects
+      <div className="app-header">
+        {/* Left — logo + back */}
+        <div className="app-header-left">
+          <button onClick={handleBack} className="app-header-logo" title="Back to projects">
+            <svg width="22" height="22" viewBox="0 0 32 32" fill="none">
+              <rect width="32" height="32" rx="8" fill="var(--accent)" />
+              <path d="M16 8L10 16L16 24" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+              <circle cx="20" cy="12" r="2" fill="white" opacity="0.9" />
+              <circle cx="20" cy="20" r="2" fill="white" opacity="0.6" />
+              <circle cx="24" cy="16" r="1.5" fill="white" opacity="0.4" />
+            </svg>
           </button>
-          <span className="text-[11px] text-[var(--border)]">/</span>
-          <span className="text-[12px] text-[var(--text-primary)] font-medium truncate max-w-[200px]">
-            {project.currentProject?.name ?? "Untitled"}
-            {project.isDirty && (
-              <span className="text-[var(--text-secondary)] ml-0.5">*</span>
-            )}
-          </span>
-        </div>
-        <div className="flex items-center gap-2">
-          {/* Chat toggle */}
           <button
             onClick={() => setChatOpen(!chatOpen)}
             title={chatOpen ? "Hide chat" : "Show chat"}
-            className={`text-[11px] px-2 py-0.5 rounded transition-colors ${
-              chatOpen
-                ? "bg-[var(--accent)]/15 text-[var(--accent)]"
-                : "bg-[var(--bg-primary)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
-            }`}
+            className={`app-header-icon-btn ${chatOpen ? "active" : ""}`}
           >
-            {chatOpen ? "Chat" : "Chat"}
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" />
+            </svg>
           </button>
+        </div>
+
+        {/* Center — project name */}
+        <div className="app-header-center">
+          <span className="app-header-project">
+            {project.currentProject?.name ?? "Untitled"}
+            {project.isDirty && (
+              <span className="app-header-dirty">*</span>
+            )}
+          </span>
+        </div>
+
+        {/* Right — actions + avatar */}
+        <div className="app-header-right">
           <button
             onClick={handleSave}
             disabled={!project.isDirty}
-            className="text-[11px] px-2.5 py-0.5 rounded bg-[var(--bg-primary)] border border-[var(--border)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:border-[var(--accent)] disabled:opacity-30 disabled:hover:border-[var(--border)] disabled:hover:text-[var(--text-secondary)] transition-colors"
+            className="app-header-icon-btn"
+            title="Save (⌘S)"
           >
-            Save
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z" />
+              <polyline points="17,21 17,13 7,13 7,21" />
+              <polyline points="7,3 7,8 15,8" />
+            </svg>
           </button>
+          <button className="app-header-export-btn" title="Export show">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
+              <polyline points="17,8 12,3 7,8" />
+              <line x1="12" y1="3" x2="12" y2="15" />
+            </svg>
+            Export
+          </button>
+          <button className="app-header-icon-btn" title="Settings">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="3" />
+              <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z" />
+            </svg>
+          </button>
+          <button className="app-header-icon-btn" title="Help">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="10" />
+              <path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3" />
+              <line x1="12" y1="17" x2="12.01" y2="17" />
+            </svg>
+          </button>
+          <div className="app-header-avatar" title="Profile">
+            <span>U</span>
+          </div>
         </div>
       </div>
 
