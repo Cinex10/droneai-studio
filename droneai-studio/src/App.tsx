@@ -353,9 +353,10 @@ function App() {
           if (isExistingProject) {
             // Restore Blender scene from saved .blend file
             try {
-              await invoke("restore_blender_scene");
+              const result = await invoke<string>("restore_blender_scene");
+              console.log("[App] restore_blender_scene:", result);
             } catch (e) {
-              console.error("Failed to restore Blender scene:", e);
+              console.error("[App] Failed to restore Blender scene:", e);
             }
             // Restore Claude conversation context
             try {
@@ -366,13 +367,22 @@ function App() {
                 timestamp: m.timestamp,
               }));
               await invoke("restore_chat", { messages: chatForRestore });
+              console.log("[App] restore_chat: sent", chatForRestore.length, "messages");
             } catch (e) {
-              console.error("Failed to restore chat:", e);
+              console.error("[App] Failed to restore chat:", e);
             }
-            // Refresh viewport after scene restore
-            setTimeout(() => refreshScene(), 1000);
+          } else {
+            console.log("[App] New project — skipping restore");
           }
           setScreen("workspace");
+          // Refresh viewport aggressively — retry until drones appear or timeout
+          let attempts = 0;
+          const poll = setInterval(async () => {
+            attempts++;
+            console.log(`[App] Scene refresh attempt ${attempts}`);
+            await refreshScene();
+            if (attempts >= 5) clearInterval(poll);
+          }, 2000);
         }}
       />
     );

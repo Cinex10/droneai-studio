@@ -468,8 +468,9 @@ pub fn save_project(
 ) -> Result<(), String> {
     let mut pm = project.lock().unwrap();
 
-    // Save .blend file via Blender (best-effort)
+    // Save .blend file via Blender
     if let Some(blend_path) = pm.blend_path() {
+        eprintln!("[save_project] Saving .blend to: {}", blend_path.display());
         let code = format!(
             "import bpy; bpy.ops.wm.save_as_mainfile(filepath=r'{}')",
             blend_path.display()
@@ -478,7 +479,12 @@ pub fn save_project(
             "type": "execute_code",
             "params": { "code": code }
         });
-        let _ = blender_mcp_call(&payload);
+        match blender_mcp_call(&payload) {
+            Ok(resp) => eprintln!("[save_project] Blend save response: {}", resp),
+            Err(e) => eprintln!("[save_project] WARNING: Blend save failed: {}", e),
+        }
+    } else {
+        eprintln!("[save_project] No blend path (no current project?)");
     }
 
     pm.save(chat, spec, build_result)
@@ -535,9 +541,10 @@ pub fn force_close(window: tauri::Window) {
 #[tauri::command]
 pub fn restore_blender_scene(
     project: State<'_, ProjectState>,
-) -> Result<(), String> {
+) -> Result<String, String> {
     let pm = project.lock().unwrap();
     if let Some(blend_path) = pm.blend_path() {
+        eprintln!("[restore_blender_scene] blend_path: {}", blend_path.display());
         if blend_path.exists() {
             let code = format!(
                 "import bpy; bpy.ops.wm.open_mainfile(filepath=r'{}')",
@@ -547,10 +554,16 @@ pub fn restore_blender_scene(
                 "type": "execute_code",
                 "params": { "code": code }
             });
-            blender_mcp_call(&payload)?;
+            let resp = blender_mcp_call(&payload)?;
+            eprintln!("[restore_blender_scene] Blender response: {}", resp);
+            return Ok(format!("Restored from {}", blend_path.display()));
+        } else {
+            eprintln!("[restore_blender_scene] File does NOT exist: {}", blend_path.display());
+            return Ok("No .blend file found — nothing to restore".to_string());
         }
     }
-    Ok(())
+    eprintln!("[restore_blender_scene] No current project");
+    Ok("No current project".to_string())
 }
 
 #[tauri::command]
