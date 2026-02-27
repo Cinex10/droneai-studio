@@ -472,8 +472,29 @@ def build_show(spec: str) -> str:
             except json.JSONDecodeError:
                 pass  # Non-JSON output is fine
 
-        # 5. Store spec for update_show
+        # 5. Store spec for update_show + persist in Blender for timeline
         _current_spec = spec_dict
+
+        # Store spec and safety in Blender scene for get_show_info extraction
+        show_info_data = {
+            "spec": spec_dict,
+            "safety": {
+                "is_safe": result.is_safe,
+                "min_spacing_found": round(result.safety_report.min_spacing_found, 2),
+                "max_velocity_found": round(result.safety_report.max_velocity_found, 2),
+                "max_altitude_found": round(result.safety_report.max_altitude_found, 2),
+                "violations": len(result.safety_report.violations),
+            },
+        }
+        show_info_json = json.dumps(show_info_data)
+        store_code = (
+            "import bpy\n"
+            f"bpy.context.scene['droneai_show_info'] = {repr(show_info_json)}"
+        )
+        try:
+            _send_command("execute_code", {"code": store_code})
+        except Exception:
+            pass  # Non-critical — timeline just won't populate
 
         return (
             f"Show built successfully!\n\n"

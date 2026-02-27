@@ -642,16 +642,48 @@ pub struct ShowInfo {
 pub fn get_show_info(
     project: State<'_, ProjectState>,
 ) -> ShowInfo {
+    // 1. Try project saved state first
     let pm = project.lock().unwrap();
-    match &pm.current {
-        Some(project) => ShowInfo {
-            spec: project.spec.clone(),
-            safety: project.build_result.as_ref().and_then(|br| br.get("safety").cloned()),
-        },
-        None => ShowInfo {
-            spec: None,
-            safety: None,
-        },
+    if let Some(proj) = &pm.current {
+        if proj.spec.is_some() {
+            return ShowInfo {
+                spec: proj.spec.clone(),
+                safety: proj.build_result.as_ref().and_then(|br| br.get("safety").cloned()),
+            };
+        }
     }
+    drop(pm);
+
+    // 2. Fall back to live Blender scene (stored by build_show in MCP server)
+    let code = r#"
+import bpy, json
+info = bpy.context.scene.get('droneai_show_info')
+if info:
+    print(info)
+else:
+    print('null')
+"#;
+    let payload = serde_json::json!({
+        "type": "execute_code",
+        "params": { "code": code }
+    });
+    if let Ok(resp) = blender_mcp_call(&payload) {
+        // Navigate: {"status":"success","result":{"executed":true,"result":"<stdout>"}}
+        let stdout = resp.get("result")
+            .and_then(|r| r.get("result"))
+            .and_then(|r| r.as_str())
+            .unwrap_or("null")
+            .trim();
+        if stdout != "null" {
+            if let Ok(info) = serde_json::from_str::<serde_json::Value>(stdout) {
+                return ShowInfo {
+                    spec: info.get("spec").cloned(),
+                    safety: info.get("safety").cloned(),
+                };
+            }
+        }
+    }
+
+    ShowInfo { spec: None, safety: None }
 }
 
