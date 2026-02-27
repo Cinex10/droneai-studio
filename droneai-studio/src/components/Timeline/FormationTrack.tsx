@@ -133,9 +133,7 @@ export default function FormationTrack({
                   {droneCount > 0 && (
                     <span className="tl-chip">
                       <span className="tl-chip-icon">●</span>
-                      {activeDrones === droneCount
-                        ? String(droneCount)
-                        : `${activeDrones}/${droneCount}`}
+                      {activeDrones}/{droneCount}
                     </span>
                   )}
                 </div>
