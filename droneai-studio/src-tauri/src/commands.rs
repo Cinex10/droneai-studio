@@ -207,7 +207,36 @@ pub fn get_claude_status(claude: State<'_, ClaudeState>) -> String {
 
 #[tauri::command]
 pub fn reset_blender_scene() -> Result<(), String> {
-    let code = "import bpy; bpy.ops.wm.read_homefile(use_empty=True)";
+    // Clear the Blender scene WITHOUT bpy.ops.wm.read_homefile — that triggers
+    // addon unregister/register which kills the MCP TCP server on port 9876.
+    let code = r#"
+import bpy
+
+# Remove all objects
+for obj in list(bpy.data.objects):
+    bpy.data.objects.remove(obj, do_unlink=True)
+
+# Clear orphaned data blocks
+for block_type in [bpy.data.meshes, bpy.data.materials,
+                   bpy.data.node_groups, bpy.data.actions]:
+    for block in list(block_type):
+        block_type.remove(block)
+
+# Clear non-default collections
+for coll in list(bpy.data.collections):
+    bpy.data.collections.remove(coll)
+
+# Reset frame range
+scene = bpy.context.scene
+scene.frame_start = 1
+scene.frame_end = 250
+scene.frame_current = 1
+
+# Recreate Drones collection for new show
+dc = bpy.data.collections.new("Drones")
+scene.collection.children.link(dc)
+print("Scene cleared")
+"#;
     let payload = serde_json::json!({
         "type": "execute_code",
         "params": { "code": code }
