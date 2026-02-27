@@ -4,12 +4,23 @@ export interface FormationSpec {
   params?: Record<string, unknown>;
 }
 
+export interface LightKeyframe {
+  t: number;
+  color: number[];
+}
+
+export interface LightSequence {
+  drones: "all" | number[] | { range: [number, number] };
+  keyframes: LightKeyframe[];
+}
+
 export interface ColorSpec {
   type: string;
   value?: number[];
   start?: number[];
   end?: number[];
   axis?: string;
+  sequences?: LightSequence[];
 }
 
 export interface TransitionSpec {
