@@ -338,6 +338,35 @@ for entry_idx in range(len(formations)):
                     )
                     break
 
+    elif color_spec["type"] == "program":
+        for seq in color_spec["sequences"]:
+            # Resolve drone targets
+            target = seq["drones"]
+            if target == "all":
+                indices = list(range(len(drone_objs)))
+            elif isinstance(target, list) and len(target) > 0 and isinstance(target[0], int):
+                indices = target
+            elif isinstance(target, dict) and "range" in target:
+                r = target["range"]
+                indices = list(range(r[0], min(r[1] + 1, len(drone_objs))))
+            else:
+                indices = list(range(len(drone_objs)))
+
+            # Insert per-drone keyframes
+            for kf in seq["keyframes"]:
+                kf_frame = frame + int(kf["t"] * fps)
+                c = kf["color"]
+                for di in indices:
+                    if di < len(drone_objs):
+                        drone = drone_objs[di]
+                        for node in drone.data.materials[0].node_tree.nodes:
+                            if node.type == "EMISSION":
+                                node.inputs["Color"].default_value = (c[0], c[1], c[2], 1.0)
+                                node.inputs["Color"].keyframe_insert(
+                                    data_path="default_value", frame=kf_frame
+                                )
+                                break
+
     # Hold keyframe for color: duplicate last color at hold_frame to prevent
     # premature interpolation during position holds
     hf = hold_frames[entry_idx]
@@ -372,6 +401,33 @@ for entry_idx in range(len(formations)):
                             data_path="default_value", frame=hf
                         )
                         break
+        elif color_spec["type"] == "program":
+            # For program, the last keyframe in each sequence serves as the hold value.
+            # Insert it at hold_frame to freeze the final state.
+            for seq in color_spec["sequences"]:
+                target = seq["drones"]
+                if target == "all":
+                    indices = list(range(len(drone_objs)))
+                elif isinstance(target, list) and len(target) > 0 and isinstance(target[0], int):
+                    indices = target
+                elif isinstance(target, dict) and "range" in target:
+                    r = target["range"]
+                    indices = list(range(r[0], min(r[1] + 1, len(drone_objs))))
+                else:
+                    indices = list(range(len(drone_objs)))
+
+                if seq["keyframes"]:
+                    last_c = seq["keyframes"][-1]["color"]
+                    for di in indices:
+                        if di < len(drone_objs):
+                            drone = drone_objs[di]
+                            for node in drone.data.materials[0].node_tree.nodes:
+                                if node.type == "EMISSION":
+                                    node.inputs["Color"].default_value = (last_c[0], last_c[1], last_c[2], 1.0)
+                                    node.inputs["Color"].keyframe_insert(
+                                        data_path="default_value", frame=hf
+                                    )
+                                    break
 
 # --- Transition interpolation ---
 interp_map = {
