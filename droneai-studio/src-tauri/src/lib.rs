@@ -22,11 +22,14 @@ pub fn run() {
                 .expect("Failed to get app data dir");
             app.manage(Mutex::new(ProjectManager::new(data_dir)));
 
-            // Prevent window close — frontend handles dirty check via CloseDialog
+            // Intercept window close — emit event to frontend, let it decide
+            use tauri::Emitter;
             let window = app.get_webview_window("main").unwrap();
+            let w = window.clone();
             window.on_window_event(move |event| {
                 if let tauri::WindowEvent::CloseRequested { api, .. } = event {
                     api.prevent_close();
+                    let _ = w.emit("close-requested", ());
                 }
             });
 
