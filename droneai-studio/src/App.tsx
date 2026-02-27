@@ -43,12 +43,18 @@ function App() {
   const { showInfo, refreshShowInfo, clearShowInfo } = useShowInfo();
   const project = useProject();
 
-  // --- Clear restore loader once scene has drones ---
+  // --- Clear restore loader once scene data arrives (or timeout) ---
   useEffect(() => {
-    if (isRestoring && sceneData?.drones && sceneData.drones.length > 0) {
+    if (isRestoring && sceneData) {
       setIsRestoring(false);
     }
   }, [isRestoring, sceneData]);
+
+  useEffect(() => {
+    if (!isRestoring) return;
+    const timeout = setTimeout(() => setIsRestoring(false), 8000);
+    return () => clearTimeout(timeout);
+  }, [isRestoring]);
 
   // --- Dirty tracking ---
   const markDirtyRef = useRef(project.markDirty);
