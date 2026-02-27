@@ -179,7 +179,7 @@ function SceneContent({
   return (
     <>
       {/* Blender-style gradient: lighter gray top → darker bottom */}
-      <color attach="background" args={["#333333"]} />
+      <color attach="background" args={["#1a1a24"]} />
       <ambientLight intensity={0.5} />
       <directionalLight position={[10, 20, 10]} intensity={0.3} />
 
@@ -187,9 +187,9 @@ function SceneContent({
       <Grid
         args={[100, 100]}
         cellSize={1}
-        cellColor="#444444"
+        cellColor="#2a2a3a"
         sectionSize={10}
-        sectionColor="#555555"
+        sectionColor="#3a3a50"
         fadeDistance={80}
         fadeStrength={1}
         position={[0, 0, 0]}
@@ -222,7 +222,7 @@ export default function DroneViewport({
           camera={{ position: [0, 20, 40], fov: 50 }}
           gl={{ antialias: true, toneMapping: THREE.ACESFilmicToneMapping }}
           onCreated={({ gl }) => {
-            gl.setClearColor("#333333");
+            gl.setClearColor("#1a1a24");
           }}
         >
           <SceneContent sceneData={sceneData} currentFrame={currentFrame} />
