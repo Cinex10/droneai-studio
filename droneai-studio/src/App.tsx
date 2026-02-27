@@ -4,7 +4,8 @@ import { listen } from "@tauri-apps/api/event";
 import type { Message } from "./types";
 import ChatPanel from "./components/ChatPanel";
 import DroneViewport from "./components/DroneViewport";
-import TimelineBar from "./components/TimelineBar";
+import { TimelinePanel } from "./components/Timeline";
+import { useShowInfo } from "./hooks/useShowInfo";
 import SetupScreen from "./components/SetupScreen";
 import ProjectPicker from "./components/ProjectPicker";
 import CloseDialog from "./components/CloseDialog";
@@ -39,6 +40,7 @@ function App() {
 
   const claude = useClaude();
   const { sceneData, refreshScene } = useSceneData();
+  const { showInfo, refreshShowInfo } = useShowInfo();
   const project = useProject();
 
   // --- Clear restore loader once scene has drones ---
@@ -56,10 +58,13 @@ function App() {
   const prevToolRunning = useRef(false);
   useEffect(() => {
     if (prevToolRunning.current && !claude.isToolRunning) {
-      setTimeout(() => refreshScene(), 500);
+      setTimeout(() => {
+        refreshScene();
+        refreshShowInfo();
+      }, 500);
     }
     prevToolRunning.current = claude.isToolRunning;
-  }, [claude.isToolRunning, refreshScene]);
+  }, [claude.isToolRunning, refreshScene, refreshShowInfo]);
 
   // Poll scene data periodically
   useEffect(() => {
@@ -446,13 +451,12 @@ function App() {
             <DroneViewport sceneData={sceneData} currentFrame={currentFrame} />
             <ViewportLoader visible={isRestoring} />
           </div>
-          <div className="h-12 border-t border-[var(--border)]">
-            <TimelineBar
-              blenderRunning={blenderRunning}
-              onFrameChange={setCurrentFrame}
-              sceneData={sceneData}
-            />
-          </div>
+          <TimelinePanel
+            sceneData={sceneData}
+            showInfo={showInfo}
+            blenderRunning={blenderRunning}
+            onFrameChange={setCurrentFrame}
+          />
         </div>
       </div>
 
