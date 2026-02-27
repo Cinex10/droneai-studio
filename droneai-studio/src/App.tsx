@@ -193,8 +193,6 @@ function App() {
     setCurrentFrame(0);
     setIsExistingProject(false);
     setIsRestoring(false);
-    clearScene();
-    clearShowInfo();
   };
 
   // --- Back to picker ---
