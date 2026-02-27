@@ -66,9 +66,11 @@ impl BlenderProcess {
     /// headless Blender (which runs an infinite sleep loop) survives.  These
     /// zombies hold port 9876 and serve stale scene data to the next launch.
     fn kill_orphaned_blenders() {
-        // Find all headless Blender processes launched by our startup script
+        // Find all headless Blender processes launched by our startup script.
+        // Use .* between args so the pattern matches both with and without a
+        // .blend file after --background (e.g. "Blender --background /path.blend --addons ...").
         let output = Command::new("pgrep")
-            .args(["-f", "Blender --background --addons addon --python"])
+            .args(["-f", "Blender.*--background.*--addons addon.*--python"])
             .output();
 
         if let Ok(output) = output {

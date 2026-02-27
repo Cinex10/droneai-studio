@@ -95,10 +95,16 @@ fn blender_mcp_call(payload: &serde_json::Value) -> Result<serde_json::Value, St
 #[tauri::command]
 pub fn get_blender_status(blender: State<'_, BlenderState>) -> String {
     let mut blender = blender.lock().unwrap();
-    if blender.is_running() {
-        "running".to_string()
-    } else {
-        "stopped".to_string()
+    if !blender.is_running() {
+        return "stopped".to_string();
+    }
+    // Process alive — verify MCP TCP server is reachable on port 9876
+    match TcpStream::connect_timeout(
+        &"127.0.0.1:9876".parse().unwrap(),
+        Duration::from_millis(500),
+    ) {
+        Ok(_) => "running".to_string(),
+        Err(_) => "starting".to_string(),
     }
 }
 
