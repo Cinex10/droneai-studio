@@ -126,6 +126,56 @@ function DroneSwarm({
   );
 }
 
+/** Ground plane — subtle solid disc so you always see "the floor" */
+function GroundPlane() {
+  return (
+    <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.05, 0]} receiveShadow>
+      <circleGeometry args={[60, 64]} />
+      <meshStandardMaterial
+        color="#0c0c18"
+        roughness={0.95}
+        metalness={0}
+        transparent
+        opacity={0.85}
+      />
+    </mesh>
+  );
+}
+
+/** Horizon gradient — fake sky via a large backdrop sphere */
+function SkySphere() {
+  const material = useMemo(() => {
+    const canvas = document.createElement("canvas");
+    canvas.width = 2;
+    canvas.height = 256;
+    const ctx = canvas.getContext("2d")!;
+    const grad = ctx.createLinearGradient(0, 0, 0, 256);
+    // Top (zenith) — dark blue-black
+    grad.addColorStop(0, "#06060f");
+    // Mid — subtle navy
+    grad.addColorStop(0.4, "#0a0a1a");
+    // Horizon — slightly lighter with a hint of color
+    grad.addColorStop(0.75, "#111128");
+    // Below horizon — dark ground match
+    grad.addColorStop(1, "#08080f");
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, 2, 256);
+    const tex = new THREE.CanvasTexture(canvas);
+    tex.needsUpdate = true;
+    return new THREE.MeshBasicMaterial({
+      map: tex,
+      side: THREE.BackSide,
+      depthWrite: false,
+    });
+  }, []);
+
+  return (
+    <mesh material={material}>
+      <sphereGeometry args={[200, 16, 16]} />
+    </mesh>
+  );
+}
+
 /** Main viewport scene content */
 function SceneContent({
   sceneData,
@@ -136,16 +186,25 @@ function SceneContent({
 }) {
   return (
     <>
-      <color attach="background" args={["#010102"]} />
-      <ambientLight intensity={0.3} />
+      <color attach="background" args={["#08080f"]} />
+      <ambientLight intensity={0.4} />
+      <directionalLight position={[20, 40, 20]} intensity={0.15} color="#8888cc" />
 
+      {/* Sky backdrop — gives horizon reference */}
+      <SkySphere />
+
+      {/* Ground plane — solid reference surface */}
+      <GroundPlane />
+
+      {/* Grid overlay on ground */}
       <Grid
-        args={[100, 100]}
+        args={[120, 120]}
         cellSize={2}
-        cellColor="#1a1a2e"
+        cellColor="#1e1e38"
         sectionSize={10}
-        sectionColor="#2a2a4e"
-        fadeDistance={80}
+        sectionColor="#2e2e58"
+        fadeDistance={70}
+        fadeStrength={1.5}
         position={[0, 0, 0]}
       />
 
@@ -173,7 +232,7 @@ export default function DroneViewport({
           camera={{ position: [0, 20, 40], fov: 50 }}
           gl={{ antialias: true, toneMapping: THREE.ACESFilmicToneMapping }}
           onCreated={({ gl }) => {
-            gl.setClearColor("#010102");
+            gl.setClearColor("#08080f");
           }}
         >
           <SceneContent sceneData={sceneData} currentFrame={currentFrame} />
