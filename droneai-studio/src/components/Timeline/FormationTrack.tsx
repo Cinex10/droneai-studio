@@ -119,7 +119,7 @@ export default function FormationTrack({
               style={{
                 left: `${cardLeft}%`,
                 width: `${cardWidth}%`,
-                minWidth: 72,
+                minWidth: 56,
               }}
             >
               {/* LED color edge */}

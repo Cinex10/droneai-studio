@@ -67,9 +67,9 @@ export default function ChatMessage({
   };
 
   return (
-    <div className={`flex ${isUser ? "justify-end" : "justify-start"}`}>
+    <div className={`flex ${isUser ? "justify-end" : "justify-start"} min-w-0`}>
       <div
-        className={`max-w-[85%] rounded-lg px-3 py-2 text-sm leading-relaxed ${
+        className={`max-w-full rounded-lg px-2.5 py-1.5 text-[13px] leading-relaxed min-w-0 ${
           isUser
             ? "bg-[var(--accent)] text-white"
             : "bg-[var(--bg-secondary)] text-[var(--text-primary)]"

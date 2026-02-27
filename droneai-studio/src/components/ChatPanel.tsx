@@ -39,9 +39,9 @@ export default function ChatPanel({
   };
 
   return (
-    <div className="flex flex-col h-full bg-[var(--bg-chat)]">
+    <div className="flex flex-col h-full min-w-0 bg-[var(--bg-chat)]">
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto px-3 py-3 space-y-3">
+      <div className="flex-1 overflow-y-auto overflow-x-hidden px-3 py-2.5 space-y-2.5 min-h-0">
         {messages.map((msg) => (
           <ChatMessage
             key={msg.id}
@@ -51,36 +51,40 @@ export default function ChatPanel({
           />
         ))}
         {isToolRunning && (
-          <div className="text-[var(--text-secondary)] text-xs flex items-center gap-2 py-1">
-            <span className="inline-block w-2 h-2 bg-[var(--accent)] rounded-full animate-pulse" />
+          <div className="text-[var(--text-secondary)] text-[11px] flex items-center gap-1.5 py-1">
+            <span className="inline-block w-1.5 h-1.5 bg-[var(--accent)] rounded-full animate-pulse" />
             Building your show...
           </div>
         )}
         {isLoading && !isToolRunning && (
-          <div className="text-[var(--text-secondary)] text-sm animate-pulse">
+          <div className="text-[var(--text-secondary)] text-[12px] animate-pulse">
             Thinking...
           </div>
         )}
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Input */}
-      <div className="px-3 py-2 border-t border-[var(--border)]">
-        <div className="flex gap-1.5">
+      {/* Input — compact */}
+      <div className="px-2 py-2 border-t border-[var(--border)] flex-shrink-0">
+        <div className="flex gap-1.5 items-end">
           <textarea
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Describe your drone show..."
+            placeholder="Describe your show..."
             rows={1}
-            className="flex-1 bg-[var(--bg-secondary)] text-[var(--text-primary)] border border-[var(--border)] rounded-lg px-2.5 py-1.5 text-sm resize-none focus:outline-none focus:border-[var(--accent)]"
+            className="flex-1 min-w-0 bg-[var(--bg-secondary)] text-[var(--text-primary)] border border-[var(--border)] rounded-md px-2.5 py-1.5 text-[13px] resize-none focus:outline-none focus:border-[var(--accent)] leading-snug"
           />
           <button
             onClick={handleSubmit}
             disabled={!input.trim() || isLoading}
-            className="px-3 py-1.5 bg-[var(--accent)] text-white rounded-lg text-sm font-medium hover:bg-[var(--accent-hover)] disabled:opacity-40 disabled:cursor-not-allowed"
+            className="chat-send-btn"
+            aria-label="Send"
           >
-            Send
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M22 2L11 13" />
+              <path d="M22 2L15 22L11 13L2 9L22 2Z" />
+            </svg>
           </button>
         </div>
       </div>

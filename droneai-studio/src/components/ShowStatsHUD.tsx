@@ -19,11 +19,11 @@ export default function ShowStatsHUD({ sceneData, showInfo }: ShowStatsHUDProps)
   const isSafe = safety?.is_safe ?? true;
 
   return (
-    <div className="absolute top-3 left-3 z-10 pointer-events-none select-none">
+    <div className="absolute top-2 left-2 z-10 pointer-events-none select-none max-w-[calc(100%-16px)]">
       <div
-        className="flex items-center gap-3 px-3 py-1.5 rounded-md text-[11px] font-mono"
+        className="flex flex-wrap items-center gap-x-2.5 gap-y-1 px-2.5 py-1.5 rounded text-[10px] font-mono"
         style={{
-          background: "rgba(10, 10, 15, 0.75)",
+          background: "rgba(10, 10, 15, 0.8)",
           backdropFilter: "blur(8px)",
           border: "1px solid rgba(255,255,255,0.06)",
         }}
@@ -59,7 +59,7 @@ export default function ShowStatsHUD({ sceneData, showInfo }: ShowStatsHUDProps)
               <span className="text-[var(--text-primary)]">{safety.max_altitude_found.toFixed(1)}</span>m alt
             </span>
             <span
-              className="text-[10px] px-1.5 py-0.5 rounded"
+              className="text-[9px] px-1.5 py-px rounded"
               style={{
                 background: isSafe ? "rgba(34, 197, 94, 0.15)" : "rgba(239, 68, 68, 0.15)",
                 color: isSafe ? "#4ade80" : "#f87171",

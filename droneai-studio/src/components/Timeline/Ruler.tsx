@@ -83,7 +83,7 @@ export default function Ruler({
           style={{ left: `${frameToX(tick.frame)}%` }}
         >
           <div className="w-px h-2 bg-[var(--text-secondary)] opacity-40" />
-          <span className="text-[9px] text-[var(--text-secondary)] opacity-60 mt-0.5">
+          <span className="text-[8px] text-[var(--text-secondary)] opacity-60 mt-px whitespace-nowrap">
             {formatTick(tick.time)}
           </span>
         </div>

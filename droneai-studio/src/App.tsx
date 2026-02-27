@@ -26,6 +26,10 @@ const WELCOME_MESSAGE: Message = {
   timestamp: Date.now(),
 };
 
+const CHAT_MIN = 220;
+const CHAT_MAX = 520;
+const CHAT_DEFAULT = 300;
+
 function App() {
   const [screen, setScreen] = useState<Screen>("picker");
   const [messages, setMessages] = useState<Message[]>([WELCOME_MESSAGE]);
@@ -38,6 +42,11 @@ function App() {
   >(null);
   const [isExistingProject, setIsExistingProject] = useState(false);
   const [isRestoring, setIsRestoring] = useState(false);
+
+  // --- Responsive sidebar state ---
+  const [chatWidth, setChatWidth] = useState(CHAT_DEFAULT);
+  const [chatOpen, setChatOpen] = useState(true);
+  const isDragging = useRef(false);
 
   const claude = useClaude();
   const { sceneData, refreshScene, clearScene } = useSceneData();
@@ -222,6 +231,30 @@ function App() {
     }
   }, [claude]);
 
+  // --- Sidebar drag resize ---
+  const handleSidebarDrag = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    isDragging.current = true;
+    const startX = e.clientX;
+    const startW = chatWidth;
+    document.body.style.cursor = "col-resize";
+    document.body.style.userSelect = "none";
+
+    const move = (ev: MouseEvent) => {
+      const newW = startW + (ev.clientX - startX);
+      setChatWidth(Math.max(CHAT_MIN, Math.min(CHAT_MAX, newW)));
+    };
+    const up = () => {
+      isDragging.current = false;
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
+      document.removeEventListener("mousemove", move);
+      document.removeEventListener("mouseup", up);
+    };
+    document.addEventListener("mousemove", move);
+    document.addEventListener("mouseup", up);
+  }, [chatWidth]);
+
   // --- Project picker actions ---
   const handleCreateProject = useCallback(
     async (name: string) => {
@@ -372,12 +405,7 @@ function App() {
     return (
       <SetupScreen
         onReady={async () => {
-          // Blender was relaunched by SetupScreen with the correct
-          // project's .blend file (or fresh for new projects), so the
-          // scene is already isolated per project.
-
           if (isExistingProject) {
-            // Restore Claude conversation context for this project
             try {
               const chatForRestore: ProjectChatMessage[] = messages.map((m) => ({
                 id: m.id,
@@ -390,13 +418,11 @@ function App() {
               console.error("[App] Failed to restore chat:", e);
             }
           } else {
-            // New project — clear frontend state from previous project
             clearScene();
             clearShowInfo();
           }
           setIsRestoring(isExistingProject);
           setScreen("workspace");
-          // Refresh viewport — retry until drones appear or timeout
           let attempts = 0;
           const poll = setInterval(async () => {
             attempts++;
@@ -409,57 +435,95 @@ function App() {
     );
   }
 
+  const effectiveChatWidth = chatOpen ? chatWidth : 0;
+
   return (
-    <div className="flex flex-col h-screen bg-[var(--bg-primary)]">
+    <div className="flex flex-col h-screen bg-[var(--bg-primary)] overflow-hidden">
       {/* Workspace header */}
-      <div className="h-8 flex items-center justify-between px-3 border-b border-[var(--border)] flex-shrink-0">
-        <div className="flex items-center gap-3">
+      <div className="h-9 flex items-center justify-between px-3 border-b border-[var(--border)] flex-shrink-0 bg-[var(--bg-secondary)]">
+        <div className="flex items-center gap-2">
           <button
             onClick={handleBack}
-            className="text-xs text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors"
+            className="text-[11px] text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors"
           >
             &larr; Projects
           </button>
-          <span className="text-sm text-[var(--text-primary)] font-medium">
+          <span className="text-[11px] text-[var(--border)]">/</span>
+          <span className="text-[12px] text-[var(--text-primary)] font-medium truncate max-w-[200px]">
             {project.currentProject?.name ?? "Untitled"}
             {project.isDirty && (
               <span className="text-[var(--text-secondary)] ml-0.5">*</span>
             )}
           </span>
         </div>
-        <button
-          onClick={handleSave}
-          disabled={!project.isDirty}
-          className="text-xs px-3 py-1 rounded bg-[var(--bg-secondary)] border border-[var(--border)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:border-[var(--accent)] disabled:opacity-30 disabled:hover:border-[var(--border)] disabled:hover:text-[var(--text-secondary)] transition-colors"
-        >
-          Save
-        </button>
+        <div className="flex items-center gap-2">
+          {/* Chat toggle */}
+          <button
+            onClick={() => setChatOpen(!chatOpen)}
+            title={chatOpen ? "Hide chat" : "Show chat"}
+            className={`text-[11px] px-2 py-0.5 rounded transition-colors ${
+              chatOpen
+                ? "bg-[var(--accent)]/15 text-[var(--accent)]"
+                : "bg-[var(--bg-primary)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+            }`}
+          >
+            {chatOpen ? "Chat" : "Chat"}
+          </button>
+          <button
+            onClick={handleSave}
+            disabled={!project.isDirty}
+            className="text-[11px] px-2.5 py-0.5 rounded bg-[var(--bg-primary)] border border-[var(--border)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:border-[var(--accent)] disabled:opacity-30 disabled:hover:border-[var(--border)] disabled:hover:text-[var(--text-secondary)] transition-colors"
+          >
+            Save
+          </button>
+        </div>
       </div>
 
       {/* Main workspace */}
-      <div className="flex flex-1 min-h-0">
-        <div className="w-[30%] min-w-[260px] max-w-[400px] border-r border-[var(--border)] flex flex-col">
-          {!claude.isActive && screen === "workspace" && (
-            <div className="px-4 py-2 bg-red-900/50 text-red-200 text-xs flex items-center justify-between">
-              <span>Claude disconnected</span>
-              <button
-                onClick={handleReconnect}
-                className="px-2 py-0.5 bg-red-700 rounded text-xs hover:bg-red-600"
-              >
-                Reconnect
-              </button>
-            </div>
+      <div className="flex flex-1 min-h-0 overflow-hidden">
+        {/* Chat sidebar */}
+        <div
+          className="flex-shrink-0 flex flex-col overflow-hidden border-r border-[var(--border)]"
+          style={{
+            width: effectiveChatWidth,
+            transition: isDragging.current ? "none" : "width 0.2s ease",
+          }}
+        >
+          {chatOpen && (
+            <>
+              {!claude.isActive && (
+                <div className="px-3 py-1.5 bg-red-900/40 text-red-300 text-[11px] flex items-center justify-between flex-shrink-0">
+                  <span>Claude disconnected</span>
+                  <button
+                    onClick={handleReconnect}
+                    className="px-2 py-0.5 bg-red-800/60 rounded text-[10px] hover:bg-red-700/60"
+                  >
+                    Reconnect
+                  </button>
+                </div>
+              )}
+              <ChatPanel
+                messages={messages}
+                onSendMessage={handleSendMessage}
+                onSelect={handleSelection}
+                isLoading={isLoading}
+                isToolRunning={claude.isToolRunning}
+              />
+            </>
           )}
-          <ChatPanel
-            messages={messages}
-            onSendMessage={handleSendMessage}
-            onSelect={handleSelection}
-            isLoading={isLoading}
-            isToolRunning={claude.isToolRunning}
-          />
         </div>
-        <div className="flex-1 flex flex-col">
-          <div className="flex-1 relative">
+
+        {/* Drag handle */}
+        {chatOpen && (
+          <div
+            className="sidebar-drag-handle"
+            onMouseDown={handleSidebarDrag}
+          />
+        )}
+
+        {/* Right side: Viewport + Timeline */}
+        <div className="flex-1 flex flex-col min-w-0 min-h-0">
+          <div className="flex-1 relative min-h-0">
             <DroneViewport sceneData={sceneData} currentFrame={currentFrame} />
             <ShowStatsHUD sceneData={sceneData} showInfo={showInfo} />
             <ViewportLoader visible={isRestoring} />
