@@ -206,6 +206,17 @@ pub fn get_claude_status(claude: State<'_, ClaudeState>) -> String {
 
 
 #[tauri::command]
+pub fn reset_blender_scene() -> Result<(), String> {
+    let code = "import bpy; bpy.ops.wm.read_homefile(use_empty=True)";
+    let payload = serde_json::json!({
+        "type": "execute_code",
+        "params": { "code": code }
+    });
+    blender_mcp_call(&payload)?;
+    Ok(())
+}
+
+#[tauri::command]
 pub fn set_blender_frame(frame: i32) -> Result<(), String> {
     let code = format!("import bpy; bpy.context.scene.frame_set({})", frame);
     let payload = serde_json::json!({

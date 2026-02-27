@@ -40,5 +40,9 @@ export function useSceneData() {
     }
   }, []);
 
-  return { sceneData, refreshScene };
+  const clearScene = useCallback(() => {
+    setSceneData(null);
+  }, []);
+
+  return { sceneData, refreshScene, clearScene };
 }

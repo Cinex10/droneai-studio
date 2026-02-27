@@ -43,6 +43,7 @@ pub fn run() {
             commands::new_chat,
             commands::get_claude_status,
             commands::set_blender_frame,
+            commands::reset_blender_scene,
             commands::get_scene_data,
             commands::run_test_show,
             // Project commands

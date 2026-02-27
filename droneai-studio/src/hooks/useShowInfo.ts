@@ -14,5 +14,9 @@ export function useShowInfo() {
     }
   }, []);
 
-  return { showInfo, refreshShowInfo };
+  const clearShowInfo = useCallback(() => {
+    setShowInfo(null);
+  }, []);
+
+  return { showInfo, refreshShowInfo, clearShowInfo };
 }

@@ -39,8 +39,8 @@ function App() {
   const [isRestoring, setIsRestoring] = useState(false);
 
   const claude = useClaude();
-  const { sceneData, refreshScene } = useSceneData();
-  const { showInfo, refreshShowInfo } = useShowInfo();
+  const { sceneData, refreshScene, clearScene } = useSceneData();
+  const { showInfo, refreshShowInfo, clearShowInfo } = useShowInfo();
   const project = useProject();
 
   // --- Clear restore loader once scene has drones ---
@@ -193,6 +193,8 @@ function App() {
     setCurrentFrame(0);
     setIsExistingProject(false);
     setIsRestoring(false);
+    clearScene();
+    clearShowInfo();
   };
 
   // --- Back to picker ---
@@ -382,8 +384,17 @@ function App() {
             } catch (e) {
               console.error("[App] Failed to restore chat:", e);
             }
+          } else {
+            // New project — clear any leftover Blender scene from previous project
+            try {
+              await invoke("reset_blender_scene");
+            } catch {
+              // Blender may not be connected yet — that's fine for new projects
+            }
+            clearScene();
+            clearShowInfo();
           }
-          setIsRestoring(true);
+          setIsRestoring(isExistingProject);
           setScreen("workspace");
           // Refresh viewport — retry until drones appear or timeout
           let attempts = 0;
