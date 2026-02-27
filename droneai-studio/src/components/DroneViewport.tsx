@@ -1,5 +1,5 @@
-import { useRef, useMemo, Component, type ReactNode } from "react";
-import { Canvas, useFrame } from "@react-three/fiber";
+import { useRef, useMemo, useEffect, Component, type ReactNode } from "react";
+import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { OrbitControls, Grid, GizmoHelper, GizmoViewport } from "@react-three/drei";
 import * as THREE from "three";
 import type { SceneData, DroneData } from "../types/scene";
@@ -7,6 +7,7 @@ import type { SceneData, DroneData } from "../types/scene";
 interface DroneViewportProps {
   sceneData: SceneData | null;
   currentFrame: number;
+  isDark?: boolean;
 }
 
 /** Error boundary to prevent Three.js crashes from taking down the whole app */
@@ -23,7 +24,7 @@ class ViewportErrorBoundary extends Component<
   render() {
     if (this.state.error) {
       return (
-        <div className="w-full h-full flex items-center justify-center bg-[#010102] text-red-400 text-sm p-4">
+        <div className="w-full h-full flex items-center justify-center bg-[var(--bg-primary)] text-red-400 text-sm p-4">
           <div className="text-center">
             <p>Viewport error: {this.state.error}</p>
             <button
@@ -126,28 +127,41 @@ function DroneSwarm({
   );
 }
 
+/** Syncs Three.js scene background with theme changes */
+function ThemeSync({ isDark }: { isDark: boolean }) {
+  const { gl, scene } = useThree();
+  useEffect(() => {
+    const bg = isDark ? "#1a1a24" : "#e3e2de";
+    gl.setClearColor(bg);
+    scene.background = new THREE.Color(bg);
+  }, [isDark, gl, scene]);
+  return null;
+}
+
 /** Main viewport scene content */
 function SceneContent({
   sceneData,
   currentFrame,
+  isDark,
 }: {
   sceneData: SceneData | null;
   currentFrame: number;
+  isDark: boolean;
 }) {
   return (
     <>
-      {/* Blender-style gradient: lighter gray top → darker bottom */}
-      <color attach="background" args={["#1a1a24"]} />
-      <ambientLight intensity={0.5} />
-      <directionalLight position={[10, 20, 10]} intensity={0.3} />
+      <color attach="background" args={[isDark ? "#1a1a24" : "#e3e2de"]} />
+      <ThemeSync isDark={isDark} />
+      <ambientLight intensity={isDark ? 0.5 : 0.7} />
+      <directionalLight position={[10, 20, 10]} intensity={isDark ? 0.3 : 0.5} />
 
-      {/* Grid floor — Blender style */}
+      {/* Grid floor */}
       <Grid
         args={[100, 100]}
         cellSize={1}
-        cellColor="#3a3a4e"
+        cellColor={isDark ? "#3a3a4e" : "#c0c0cc"}
         sectionSize={10}
-        sectionColor="#4e4e68"
+        sectionColor={isDark ? "#4e4e68" : "#a8a8b8"}
         fadeDistance={80}
         fadeStrength={1}
         position={[0, 0, 0]}
@@ -167,7 +181,7 @@ function SceneContent({
       <GizmoHelper alignment="top-right" margin={[60, 60]}>
         <GizmoViewport
           axisColors={["#cc3333", "#33cc33", "#3366cc"]}
-          labelColor="#fff"
+          labelColor={isDark ? "#fff" : "#333"}
         />
       </GizmoHelper>
     </>
@@ -177,6 +191,7 @@ function SceneContent({
 export default function DroneViewport({
   sceneData,
   currentFrame,
+  isDark = true,
 }: DroneViewportProps) {
   return (
     <ViewportErrorBoundary>
@@ -185,10 +200,10 @@ export default function DroneViewport({
           camera={{ position: [0, 20, 40], fov: 50 }}
           gl={{ antialias: true, toneMapping: THREE.ACESFilmicToneMapping }}
           onCreated={({ gl }) => {
-            gl.setClearColor("#1a1a24");
+            gl.setClearColor(isDark ? "#1a1a24" : "#e3e2de");
           }}
         >
-          <SceneContent sceneData={sceneData} currentFrame={currentFrame} />
+          <SceneContent sceneData={sceneData} currentFrame={currentFrame} isDark={isDark} />
         </Canvas>
       </div>
     </ViewportErrorBoundary>
