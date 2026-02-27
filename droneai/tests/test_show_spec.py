@@ -162,3 +162,104 @@ def test_spec_to_dict_roundtrip():
     assert roundtripped.drone_count == spec.drone_count
     assert len(roundtripped.timeline) == len(spec.timeline)
     assert roundtripped.timeline[1].formation.shape == "heart"
+
+
+def test_parse_program_color_spec():
+    """ColorSpec type='program' parses sequences correctly."""
+    from droneai.engine.show_spec import ColorSpec
+
+    raw = {
+        "type": "program",
+        "sequences": [
+            {
+                "drones": "all",
+                "keyframes": [
+                    {"t": 0.0, "color": [1, 0, 0]},
+                    {"t": 0.5, "color": [0, 0, 1]},
+                ],
+            }
+        ],
+    }
+    cs = ColorSpec.from_dict(raw)
+    assert cs.type == "program"
+    assert cs.sequences is not None
+    assert len(cs.sequences) == 1
+    assert cs.sequences[0]["drones"] == "all"
+    assert len(cs.sequences[0]["keyframes"]) == 2
+    assert cs.sequences[0]["keyframes"][0]["color"] == [1, 0, 0]
+
+
+def test_program_color_roundtrip():
+    """program ColorSpec survives to_dict() -> from_dict() roundtrip."""
+    from droneai.engine.show_spec import ColorSpec
+
+    raw = {
+        "type": "program",
+        "sequences": [
+            {
+                "drones": [0, 1, 2],
+                "keyframes": [
+                    {"t": 0.0, "color": [1, 0, 0]},
+                    {"t": 1.0, "color": [0, 1, 0]},
+                ],
+            },
+            {
+                "drones": "all",
+                "keyframes": [
+                    {"t": 0.0, "color": [0, 0, 1]},
+                ],
+            },
+        ],
+    }
+    cs = ColorSpec.from_dict(raw)
+    d = cs.to_dict()
+    assert d["type"] == "program"
+    assert len(d["sequences"]) == 2
+    cs2 = ColorSpec.from_dict(d)
+    assert cs2.sequences == cs.sequences
+
+
+def test_program_in_full_spec():
+    """Full ShowSpec with a program color entry parses and roundtrips."""
+    from droneai.engine.show_spec import ShowSpec
+
+    raw = {
+        "version": "1.0",
+        "drone_count": 5,
+        "fps": 24,
+        "timeline": [
+            {
+                "time": 0,
+                "hold": 2,
+                "formation": {"type": "parametric", "shape": "grid", "params": {"spacing": 2.0}},
+                "color": {"type": "solid", "value": [0.2, 0.2, 1.0]},
+            },
+            {
+                "time": 5,
+                "hold": 3,
+                "formation": {"type": "parametric", "shape": "circle", "params": {"radius": 10}},
+                "color": {
+                    "type": "program",
+                    "sequences": [
+                        {
+                            "drones": "all",
+                            "keyframes": [
+                                {"t": 0.0, "color": [1, 0, 0]},
+                                {"t": 1.0, "color": [0.2, 0, 0]},
+                                {"t": 2.0, "color": [1, 0, 0]},
+                            ],
+                        }
+                    ],
+                },
+                "transition": {"easing": "ease_in_out"},
+            },
+        ],
+    }
+    spec = ShowSpec.from_dict(raw)
+    assert spec.timeline[1].color.type == "program"
+    assert len(spec.timeline[1].color.sequences) == 1
+
+    # Roundtrip
+    roundtripped = ShowSpec.from_dict(spec.to_dict())
+    assert roundtripped.timeline[1].color.type == "program"
+    assert roundtripped.timeline[1].color.sequences == spec.timeline[1].color.sequences

@@ -9,7 +9,7 @@ The spec format is:
         {
             "time": float (seconds),
             "formation": {"type": "parametric"|"positions", ...},
-            "color": {"type": "solid"|"gradient", ...},
+            "color": {"type": "solid"|"gradient"|"program", ...},
             "transition": {"easing": str} (optional, absent on first entry)
         }
     ]
@@ -52,11 +52,12 @@ class FormationSpec:
 
 @dataclass
 class ColorSpec:
-    type: str  # "solid" | "gradient"
+    type: str  # "solid" | "gradient" | "program"
     value: Optional[List[float]] = None  # for "solid": [r, g, b]
     start: Optional[List[float]] = None  # for "gradient"
     end: Optional[List[float]] = None  # for "gradient"
     axis: str = "x"  # for "gradient"
+    sequences: Optional[List[dict]] = None  # for "program"
 
     @classmethod
     def from_dict(cls, d: dict) -> "ColorSpec":
@@ -66,6 +67,7 @@ class ColorSpec:
             start=d.get("start"),
             end=d.get("end"),
             axis=d.get("axis", "x"),
+            sequences=d.get("sequences"),
         )
 
     def to_dict(self) -> dict:
@@ -76,6 +78,8 @@ class ColorSpec:
             out["start"] = self.start
             out["end"] = self.end
             out["axis"] = self.axis
+        elif self.type == "program":
+            out["sequences"] = self.sequences
         return out
 
 
