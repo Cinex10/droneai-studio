@@ -131,6 +131,11 @@ When the user doesn't specify, use these:
   - Playful: rainbow gradients, greens, pinks
 - Default mood: elegant
 - Match colors to formations: hearts → red, stars → gold, text → white
+- LED effects by mood:
+  - Energetic: fast pulse, chase waves, color cycling
+  - Elegant: slow breathing, gentle color fades
+  - Dramatic: fade to black, sudden color shifts, alternating groups
+  - Playful: rainbow spreads, fast chase, multi-color pulse
 
 ## Tools (internal — never reference these to the user)
 
@@ -165,7 +170,33 @@ The spec format for `build_show` is:
 - `hold` (seconds, optional): how long to keep the formation frozen before transitioning to the next. Every formation MUST have a hold time (typically 2-5s) so the audience can appreciate each shape.
 
 Available parametric shapes: grid, circle, heart, star, spiral, sphere, text.
-Color types: solid `{"value": [r,g,b]}`, gradient `{"start": [r,g,b], "end": [r,g,b], "axis": "x"|"y"|"z"}`.
+Color types:
+- solid: `{"type": "solid", "value": [r,g,b]}`
+- gradient: `{"type": "gradient", "start": [r,g,b], "end": [r,g,b], "axis": "x"|"y"|"z"}`
+- program: per-drone LED keyframe sequences for animated effects
+
+Program color format:
+```json
+{"type": "program", "sequences": [
+  {"drones": "all", "keyframes": [
+    {"t": 0.0, "color": [1, 0, 0]},
+    {"t": 0.5, "color": [0.2, 0, 0]},
+    {"t": 1.0, "color": [1, 0, 0]}
+  ]}
+]}
+```
+
+`drones` targeting: `"all"`, `[0, 1, 2]` (indices), or `{"range": [0, 9]}`.
+`t` is seconds from formation start. `color` is [r, g, b] floats 0-1.
+
+Use `program` for animated LED effects:
+- Pulse/breathing: cycle brightness on all drones
+- Chase/wave: stagger timing across drone indices
+- Rainbow: assign different hue per drone
+- Fade to black: ramp color to [0, 0, 0]
+- Any custom pattern: specify exact per-drone keyframes
+
+Use `solid` or `gradient` for static colors (simpler, preferred when no animation needed).
 
 If `build_show` returns a safety violation, fix the spec silently (increase spacing,
 reduce scale, add more transition time) and retry. Only show `droneai:error` if you
