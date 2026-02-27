@@ -126,48 +126,6 @@ function DroneSwarm({
   );
 }
 
-/** Colored axis lines — X=red, Y=green, Z=blue, like Blender */
-function AxisLines() {
-  const xLine = useMemo(() => {
-    const geo = new THREE.BufferGeometry().setFromPoints([
-      new THREE.Vector3(-100, 0, 0),
-      new THREE.Vector3(100, 0, 0),
-    ]);
-    return geo;
-  }, []);
-  const yLine = useMemo(() => {
-    const geo = new THREE.BufferGeometry().setFromPoints([
-      new THREE.Vector3(0, 0, -100),
-      new THREE.Vector3(0, 0, 100),
-    ]);
-    return geo;
-  }, []);
-  const zLine = useMemo(() => {
-    const geo = new THREE.BufferGeometry().setFromPoints([
-      new THREE.Vector3(0, 0, 0),
-      new THREE.Vector3(0, 100, 0),
-    ]);
-    return geo;
-  }, []);
-
-  return (
-    <group>
-      {/* X axis — red */}
-      <lineSegments geometry={xLine}>
-        <lineBasicMaterial color="#cc3333" opacity={0.6} transparent />
-      </lineSegments>
-      {/* Y axis (Blender Y → Three Z) — green */}
-      <lineSegments geometry={yLine}>
-        <lineBasicMaterial color="#33cc33" opacity={0.6} transparent />
-      </lineSegments>
-      {/* Z axis (Blender Z → Three Y) — blue */}
-      <lineSegments geometry={zLine}>
-        <lineBasicMaterial color="#3366cc" opacity={0.6} transparent />
-      </lineSegments>
-    </group>
-  );
-}
-
 /** Main viewport scene content */
 function SceneContent({
   sceneData,
@@ -194,9 +152,6 @@ function SceneContent({
         fadeStrength={1}
         position={[0, 0, 0]}
       />
-
-      {/* Colored axis indicators */}
-      <AxisLines />
 
       {sceneData?.drones && sceneData.drones.length > 0 && (
         <DroneSwarm drones={sceneData.drones} currentFrame={currentFrame} />
