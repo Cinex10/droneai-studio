@@ -117,9 +117,7 @@ function DroneSwarm({
   return (
     <instancedMesh ref={meshRef} args={[undefined, undefined, count]}>
       <sphereGeometry args={[0.15, 16, 16]} />
-      <meshStandardMaterial
-        emissive="white"
-        emissiveIntensity={8}
+      <meshBasicMaterial
         toneMapped={false}
         vertexColors
       />
