@@ -388,68 +388,323 @@ pub fn get_scene_data() -> Result<String, String> {
     Err(format!("Unexpected response from Blender: {}", resp))
 }
 
-/// A pre-built drone show for quick testing: 25 drones, 4 formations,
-/// color transitions.  Triggered by the /test command in the chat input.
-/// Uses the droneai library for all formation generation and Blender scripting.
+/// A pre-built drone show for quick testing: 25 drones, 5 formations with
+/// LED program colors.  Triggered by the /test command in the chat input.
+/// Uses the full ShowSpec → ShowBuilder → Blender rendering pipeline so the
+/// timeline, show info HUD, and viewport all update correctly.
 ///
 /// NOTE: The `sys.path` preamble is prepended dynamically by `run_test_show()`
 /// so this script only contains the actual show logic.
 const TEST_SHOW_SCRIPT: &str = r#"
-import bpy
-from droneai.blender_scripts.setup_scene import setup_drone_show_scene
-from droneai.blender_scripts.create_drones import create_drones
-from droneai.blender_scripts.create_formation import create_formation
-from droneai.blender_scripts.set_led_colors import set_led_color_all
-from droneai.blender_scripts.animate_transition import animate_transition
+import json
+from droneai.engine.show_spec import ShowSpec
+from droneai.engine.show_builder import ShowBuilder
 
-N   = 25
-FPS = 24
-HOLD  = 3   # seconds per formation hold
-TRANS = 3   # seconds per transition
+spec_dict = {
+    "version": "1.0",
+    "drone_count": 25,
+    "fps": 24,
+    "timeline": [
+        {
+            "time": 0, "hold": 2,
+            "formation": {"type": "parametric", "shape": "grid", "params": {"spacing": 2.5, "altitude": 0}},
+            "color": {"type": "solid", "value": [0.2, 0.2, 1.0]}
+        },
+        {
+            "time": 5, "hold": 3,
+            "formation": {"type": "parametric", "shape": "circle", "params": {"radius": 12, "altitude": 15}},
+            "color": {"type": "solid", "value": [0, 0.8, 1.0]},
+            "transition": {"easing": "ease_in_out"}
+        },
+        {
+            "time": 12, "hold": 5,
+            "formation": {"type": "parametric", "shape": "heart", "params": {"scale": 20, "altitude": 20}},
+            "color": {
+                "type": "program",
+                "sequences": [{
+                    "drones": "all",
+                    "keyframes": [
+                        {"t": 0.0, "color": [1.0, 0.1, 0.1]},
+                        {"t": 1.0, "color": [0.3, 0.0, 0.0]},
+                        {"t": 2.0, "color": [1.0, 0.1, 0.1]},
+                        {"t": 3.0, "color": [0.3, 0.0, 0.0]},
+                        {"t": 4.0, "color": [1.0, 0.1, 0.1]}
+                    ]
+                }]
+            },
+            "transition": {"easing": "ease_in_out"}
+        },
+        {
+            "time": 22, "hold": 3,
+            "formation": {"type": "parametric", "shape": "star", "params": {"outer_radius": 12, "altitude": 20}},
+            "color": {"type": "gradient", "start": [1.0, 0.85, 0.0], "end": [1.0, 0.3, 0.0], "axis": "y"},
+            "transition": {"easing": "ease_in_out"}
+        },
+        {
+            "time": 30, "hold": 2,
+            "formation": {"type": "parametric", "shape": "grid", "params": {"spacing": 2.5, "altitude": 0}},
+            "color": {"type": "solid", "value": [0.1, 0.1, 0.5]},
+            "transition": {"easing": "ease_in_out"}
+        }
+    ]
+}
 
-def sec(s):
-    return int(s * FPS)
+# 1. Build using the full engine pipeline
+show_spec = ShowSpec.from_dict(spec_dict)
+builder = ShowBuilder()
+result = builder.build(show_spec)
 
-# 1. Setup scene and create drones
-setup_drone_show_scene(fps=FPS, duration_seconds=30)
-create_drones(count=N)
+# 2. Prepare rendering data (same as server.py _generate_blender_script)
+formations_data = [
+    [tuple(round(c, 4) for c in pos) for pos in formation]
+    for formation in result.formations
+]
+color_data = [entry.color.to_dict() for entry in show_spec.timeline]
+easings = []
+for i in range(1, len(show_spec.timeline)):
+    entry = show_spec.timeline[i]
+    easings.append(
+        entry.transition.easing.upper().replace("-", "_")
+        if entry.transition else "EASE_IN_OUT"
+    )
+data_dict = {
+    "fps": show_spec.fps,
+    "drone_count": show_spec.drone_count,
+    "formations": formations_data,
+    "frames": result.frames,
+    "hold_frames": result.hold_frames,
+    "colors": color_data,
+    "easings": easings,
+}
 
-# 2. Build timeline: ground → circle → heart → star → landing
-frame = 0
-create_formation("grid", frame=frame, altitude=0, spacing=2.5)
-set_led_color_all((0.2, 0.2, 1.0), frame=frame)
+# 3. Execute the Blender rendering script
+import bpy, bmesh
+_DATA = data_dict
 
-frame += sec(TRANS)
-create_formation("circle", frame=frame, radius=12, altitude=15)
-set_led_color_all((0.0, 0.8, 1.0), frame=frame)
+fps = _DATA["fps"]
+drone_count = _DATA["drone_count"]
+formations = _DATA["formations"]
+frames = _DATA["frames"]
+hold_frames = _DATA.get("hold_frames", frames)
+colors = _DATA["colors"]
+easings_list = _DATA["easings"]
 
-frame += sec(HOLD)
-create_formation("circle", frame=frame, radius=12, altitude=15)
+# Clear scene
+for obj in list(bpy.data.objects):
+    bpy.data.objects.remove(obj, do_unlink=True)
+for block in list(bpy.data.meshes):
+    if block.users == 0:
+        bpy.data.meshes.remove(block)
+for block in list(bpy.data.materials):
+    if block.users == 0:
+        bpy.data.materials.remove(block)
 
-frame += sec(TRANS)
-create_formation("heart", frame=frame, scale=24, altitude=20)
-set_led_color_all((1.0, 0.1, 0.3), frame=frame)
+scene = bpy.context.scene
+scene.render.fps = fps
+scene.frame_start = 0
+scene.frame_end = frames[-1]
+scene.frame_current = 0
 
-frame += sec(HOLD)
-create_formation("heart", frame=frame, scale=24, altitude=20)
+# Dark background
+world = bpy.data.worlds.get("World")
+if world is None:
+    world = bpy.data.worlds.new("World")
+scene.world = world
+world.use_nodes = True
+bg_node = world.node_tree.nodes.get("Background")
+if bg_node:
+    bg_node.inputs[0].default_value = (0.01, 0.01, 0.02, 1.0)
 
-frame += sec(TRANS)
-create_formation("star", frame=frame, outer_radius=12, altitude=20)
-set_led_color_all((1.0, 0.85, 0.0), frame=frame)
+# Ground plane
+gnd_mesh = bpy.data.meshes.new("Ground_Mesh")
+gnd_mesh.from_pydata(
+    [(-50, -50, 0), (50, -50, 0), (50, 50, 0), (-50, 50, 0)], [], [(0, 1, 2, 3)]
+)
+gnd_obj = bpy.data.objects.new("Ground", gnd_mesh)
+scene.collection.objects.link(gnd_obj)
+gnd_mat = bpy.data.materials.new("Ground_Material")
+gnd_mat.diffuse_color = (0.1, 0.15, 0.1, 1.0)
+gnd_obj.data.materials.append(gnd_mat)
 
-frame += sec(HOLD)
-create_formation("star", frame=frame, outer_radius=12, altitude=20)
+# Create drones
+drone_coll = bpy.data.collections.new("Drones")
+scene.collection.children.link(drone_coll)
+bm = bmesh.new()
+bmesh.ops.create_uvsphere(bm, u_segments=8, v_segments=6, radius=0.15)
+template_mesh = bpy.data.meshes.new("Drone_Mesh")
+bm.to_mesh(template_mesh)
+bm.free()
 
-frame += sec(TRANS)
-create_formation("grid", frame=frame, altitude=0, spacing=2.5)
-set_led_color_all((0.2, 0.2, 1.0), frame=frame)
+drone_objs = []
+for i in range(drone_count):
+    name = f"Drone_{i + 1:03d}"
+    obj = bpy.data.objects.new(name, template_mesh.copy())
+    drone_coll.objects.link(obj)
+    p = formations[0][i]
+    obj.location = (p[0], p[1], p[2])
+    mat = bpy.data.materials.new(f"LED_{i + 1:03d}")
+    mat.use_nodes = True
+    nodes = mat.node_tree.nodes
+    links = mat.node_tree.links
+    for n in list(nodes):
+        nodes.remove(n)
+    em = nodes.new("ShaderNodeEmission")
+    em.inputs["Color"].default_value = (1.0, 1.0, 1.0, 1.0)
+    em.inputs["Strength"].default_value = 5.0
+    out = nodes.new("ShaderNodeOutputMaterial")
+    links.new(em.outputs["Emission"], out.inputs["Surface"])
+    obj.data.materials.append(mat)
+    drone_objs.append(obj)
 
-# 3. Smooth all transitions
-animate_transition(0, frame, easing="EASE_IN_OUT")
+# Keyframe positions & colors
+for entry_idx in range(len(formations)):
+    pos_list = formations[entry_idx]
+    frame = frames[entry_idx]
+    color_spec = colors[entry_idx]
 
-# 4. Set final frame range
-bpy.context.scene.frame_end = frame
-print(f"Test show created: {N} drones, {frame} frames ({frame/FPS:.1f}s)")
+    for di, drone in enumerate(drone_objs):
+        p = pos_list[di]
+        drone.location = (p[0], p[1], p[2])
+        drone.keyframe_insert(data_path="location", frame=frame)
+
+    hf = hold_frames[entry_idx]
+    if hf > frame:
+        for di, drone in enumerate(drone_objs):
+            p = pos_list[di]
+            drone.location = (p[0], p[1], p[2])
+            drone.keyframe_insert(data_path="location", frame=hf)
+
+    if color_spec["type"] == "solid":
+        c = color_spec["value"]
+        for drone in drone_objs:
+            for node in drone.data.materials[0].node_tree.nodes:
+                if node.type == "EMISSION":
+                    node.inputs["Color"].default_value = (c[0], c[1], c[2], 1.0)
+                    node.inputs["Color"].keyframe_insert(data_path="default_value", frame=frame)
+                    break
+    elif color_spec["type"] == "gradient":
+        ax = {"x": 0, "y": 1, "z": 2}[color_spec.get("axis", "x")]
+        sc, ec = color_spec["start"], color_spec["end"]
+        vals = [pos_list[j][ax] for j in range(len(drone_objs))]
+        lo, hi = min(vals), max(vals)
+        span = hi - lo if hi > lo else 1.0
+        for di, drone in enumerate(drone_objs):
+            t = (pos_list[di][ax] - lo) / span
+            c = (sc[0] + t * (ec[0] - sc[0]), sc[1] + t * (ec[1] - sc[1]), sc[2] + t * (ec[2] - sc[2]))
+            for node in drone.data.materials[0].node_tree.nodes:
+                if node.type == "EMISSION":
+                    node.inputs["Color"].default_value = (c[0], c[1], c[2], 1.0)
+                    node.inputs["Color"].keyframe_insert(data_path="default_value", frame=frame)
+                    break
+    elif color_spec["type"] == "program":
+        for seq in color_spec["sequences"]:
+            target = seq["drones"]
+            if target == "all":
+                indices = list(range(len(drone_objs)))
+            elif isinstance(target, list) and len(target) > 0 and isinstance(target[0], int):
+                indices = target
+            else:
+                indices = list(range(len(drone_objs)))
+            for kf in seq["keyframes"]:
+                kf_frame = frame + int(kf["t"] * fps)
+                c = kf["color"]
+                for di in indices:
+                    if di < len(drone_objs):
+                        drone = drone_objs[di]
+                        for node in drone.data.materials[0].node_tree.nodes:
+                            if node.type == "EMISSION":
+                                node.inputs["Color"].default_value = (c[0], c[1], c[2], 1.0)
+                                node.inputs["Color"].keyframe_insert(data_path="default_value", frame=kf_frame)
+                                break
+
+    # Color hold-frame
+    if hf > frame:
+        if color_spec["type"] == "solid":
+            c = color_spec["value"]
+            for drone in drone_objs:
+                for node in drone.data.materials[0].node_tree.nodes:
+                    if node.type == "EMISSION":
+                        node.inputs["Color"].default_value = (c[0], c[1], c[2], 1.0)
+                        node.inputs["Color"].keyframe_insert(data_path="default_value", frame=hf)
+                        break
+        elif color_spec["type"] == "gradient":
+            ax = {"x": 0, "y": 1, "z": 2}[color_spec.get("axis", "x")]
+            sc, ec = color_spec["start"], color_spec["end"]
+            vals = [pos_list[j][ax] for j in range(len(drone_objs))]
+            lo, hi = min(vals), max(vals)
+            span = hi - lo if hi > lo else 1.0
+            for di, drone in enumerate(drone_objs):
+                t = (pos_list[di][ax] - lo) / span
+                c = (sc[0] + t * (ec[0] - sc[0]), sc[1] + t * (ec[1] - sc[1]), sc[2] + t * (ec[2] - sc[2]))
+                for node in drone.data.materials[0].node_tree.nodes:
+                    if node.type == "EMISSION":
+                        node.inputs["Color"].default_value = (c[0], c[1], c[2], 1.0)
+                        node.inputs["Color"].keyframe_insert(data_path="default_value", frame=hf)
+                        break
+        elif color_spec["type"] == "program":
+            for seq in color_spec["sequences"]:
+                target = seq["drones"]
+                if target == "all":
+                    indices = list(range(len(drone_objs)))
+                elif isinstance(target, list) and len(target) > 0 and isinstance(target[0], int):
+                    indices = target
+                else:
+                    indices = list(range(len(drone_objs)))
+                if seq["keyframes"]:
+                    last_c = seq["keyframes"][-1]["color"]
+                    for di in indices:
+                        if di < len(drone_objs):
+                            drone = drone_objs[di]
+                            for node in drone.data.materials[0].node_tree.nodes:
+                                if node.type == "EMISSION":
+                                    node.inputs["Color"].default_value = (last_c[0], last_c[1], last_c[2], 1.0)
+                                    node.inputs["Color"].keyframe_insert(data_path="default_value", frame=hf)
+                                    break
+
+# Transition interpolation
+interp_map = {"LINEAR": "LINEAR", "EASE_IN_OUT": "BEZIER", "EASE_IN": "BEZIER", "EASE_OUT": "BEZIER"}
+for i in range(len(easings_list)):
+    easing = easings_list[i]
+    f_start = hold_frames[i]
+    f_end = frames[i + 1]
+    interp = interp_map.get(easing, "BEZIER")
+    for drone in drone_objs:
+        if not drone.animation_data or not drone.animation_data.action:
+            continue
+        for fcurve in drone.animation_data.action.fcurves:
+            if fcurve.data_path != "location":
+                continue
+            for kp in fcurve.keyframe_points:
+                if f_start <= kp.co[0] <= f_end:
+                    kp.interpolation = interp
+                    if easing == "EASE_IN_OUT":
+                        kp.easing = "AUTO"
+                    elif easing == "EASE_IN":
+                        kp.easing = "EASE_IN"
+                    elif easing == "EASE_OUT":
+                        kp.easing = "EASE_OUT"
+
+scene.frame_set(0)
+
+# 4. Store show info for timeline + HUD
+show_info_data = {
+    "spec": spec_dict,
+    "safety": {
+        "is_safe": result.is_safe,
+        "min_spacing_found": round(result.safety_report.min_spacing_found, 2),
+        "max_velocity_found": round(result.safety_report.max_velocity_found, 2),
+        "max_altitude_found": round(result.safety_report.max_altitude_found, 2),
+        "violations": len(result.safety_report.violations),
+    },
+}
+bpy.context.scene["droneai_show_info"] = json.dumps(show_info_data)
+
+summary = (
+    f"Show rendered: {drone_count} drones, "
+    f"{len(formations)} formations, "
+    f"{frames[-1]} frames ({frames[-1] / fps:.1f}s)"
+)
+print(json.dumps({"status": "ok", "summary": summary}))
 "#;
 
 #[tauri::command]
@@ -479,7 +734,7 @@ pub fn run_test_show(app: tauri::AppHandle) -> Result<String, String> {
 
     if let Some(status) = resp.get("status").and_then(|s| s.as_str()) {
         if status == "success" {
-            return Ok("Test show created: 25 drones, circle → heart → star → landing".to_string());
+            return Ok("Test show created: 25 drones, grid → circle → heart (LED pulse) → star (gradient) → landing".to_string());
         }
     }
     if let Some(err) = resp.get("error").or_else(|| resp.get("message")) {
