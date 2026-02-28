@@ -309,7 +309,7 @@ def extract_drone_data(obj):
         mat = obj.data.materials[0]
         if mat and mat.node_tree and mat.node_tree.animation_data and mat.node_tree.animation_data.action:
             for fc in mat.node_tree.animation_data.action.fcurves:
-                if "Color" in fc.data_path:
+                if "default_value" in fc.data_path:
                     idx = fc.array_index
                     for kp in fc.keyframe_points:
                         f = int(kp.co[0])
