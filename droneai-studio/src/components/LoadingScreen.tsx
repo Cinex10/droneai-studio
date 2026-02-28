@@ -109,17 +109,35 @@ export default function LoadingScreen({ onReady }: LoadingScreenProps) {
     [updateStep]
   );
 
+  const completedCount = steps.filter((s) => s.status === "completed").length;
+  const progress = completedCount / steps.length;
+
   return (
     <div className="loading-screen">
+      {/* Ambient glow behind content */}
+      <div className="loading-ambient" />
+
       <div className="loading-screen-inner">
         {/* Logo */}
         <div className="loading-logo">
-          <svg width="40" height="40" viewBox="0 0 24 24" fill="none">
-            <circle cx="12" cy="12" r="10" stroke="var(--accent)" strokeWidth="1.5" opacity="0.5" />
-            <circle cx="12" cy="8" r="2" fill="var(--accent)" />
-            <circle cx="7" cy="14" r="1.5" fill="var(--accent)" opacity="0.7" />
-            <circle cx="17" cy="14" r="1.5" fill="var(--accent)" opacity="0.7" />
-            <circle cx="12" cy="17" r="1.2" fill="var(--accent)" opacity="0.4" />
+          <div className="loading-logo-glow" />
+          <svg className="loading-logo-svg" width="48" height="48" viewBox="0 0 24 24" fill="none">
+            <defs>
+              <filter id="drone-glow">
+                <feGaussianBlur stdDeviation="0.8" result="blur" />
+                <feMerge>
+                  <feMergeNode in="blur" />
+                  <feMergeNode in="SourceGraphic" />
+                </feMerge>
+              </filter>
+            </defs>
+            <circle cx="12" cy="12" r="10" stroke="var(--accent)" strokeWidth="1.5" opacity="0.3" />
+            <g filter="url(#drone-glow)">
+              <circle cx="12" cy="8" r="2" fill="var(--accent)" />
+              <circle cx="7" cy="14" r="1.5" fill="var(--accent)" opacity="0.7" />
+              <circle cx="17" cy="14" r="1.5" fill="var(--accent)" opacity="0.7" />
+              <circle cx="12" cy="17" r="1.2" fill="var(--accent)" opacity="0.4" />
+            </g>
           </svg>
           <h1 className="loading-title">DroneAI Studio</h1>
         </div>
@@ -127,10 +145,14 @@ export default function LoadingScreen({ onReady }: LoadingScreenProps) {
         {/* Steps */}
         <div className="loading-steps">
           {steps.map((step, i) => (
-            <div key={i} className={`loading-step loading-step--${step.status}`}>
+            <div
+              key={i}
+              className={`loading-step loading-step--${step.status}`}
+              style={{ animationDelay: `${i * 120}ms` }}
+            >
               <div className="loading-step-indicator">
                 {step.status === "completed" && (
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <svg className="loading-checkmark" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                     <polyline points="20 6 9 17 4 12" />
                   </svg>
                 )}
@@ -166,6 +188,14 @@ export default function LoadingScreen({ onReady }: LoadingScreenProps) {
             </div>
           ))}
         </div>
+      </div>
+
+      {/* Progress bar */}
+      <div className="loading-progress">
+        <div
+          className="loading-progress-fill"
+          style={{ transform: `scaleX(${progress})` }}
+        />
       </div>
     </div>
   );

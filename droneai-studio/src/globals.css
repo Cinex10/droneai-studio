@@ -1134,6 +1134,27 @@ body {
   align-items: center;
   justify-content: center;
   background: var(--bg-primary);
+  position: relative;
+  overflow: hidden;
+}
+
+/* Atmospheric radial glow behind content */
+.loading-ambient {
+  position: absolute;
+  width: 500px;
+  height: 500px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(var(--accent-rgb), 0.06) 0%, transparent 70%);
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -55%);
+  pointer-events: none;
+  animation: loading-ambient-breathe 4s ease-in-out infinite;
+}
+
+@keyframes loading-ambient-breathe {
+  0%, 100% { opacity: 0.6; transform: translate(-50%, -55%) scale(1); }
+  50%      { opacity: 1;   transform: translate(-50%, -55%) scale(1.08); }
 }
 
 .loading-screen-inner {
@@ -1143,13 +1164,50 @@ body {
   gap: 2.5rem;
   max-width: 320px;
   width: 100%;
+  position: relative;
+  z-index: 1;
+  animation: loading-fade-in 0.6s ease-out both;
 }
+
+@keyframes loading-fade-in {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ---- Logo ---- */
 
 .loading-logo {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 0.75rem;
+  position: relative;
+}
+
+.loading-logo-glow {
+  position: absolute;
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(var(--accent-rgb), 0.2) 0%, transparent 70%);
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -60%);
+  animation: loading-logo-pulse 3s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes loading-logo-pulse {
+  0%, 100% { opacity: 0.5; transform: translate(-50%, -60%) scale(1); }
+  50%      { opacity: 1;   transform: translate(-50%, -60%) scale(1.3); }
+}
+
+.loading-logo-svg {
+  animation: loading-logo-rotate 20s linear infinite;
+}
+
+@keyframes loading-logo-rotate {
+  to { transform: rotate(360deg); }
 }
 
 .loading-title {
@@ -1158,6 +1216,8 @@ body {
   color: var(--text-primary);
   letter-spacing: -0.01em;
 }
+
+/* ---- Steps ---- */
 
 .loading-steps {
   width: 100%;
@@ -1174,11 +1234,18 @@ body {
   border-radius: 0.5rem;
   background: var(--bg-secondary);
   border: 1px solid var(--border);
-  transition: all 0.3s ease;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  animation: loading-step-enter 0.4s ease-out both;
+}
+
+@keyframes loading-step-enter {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 
 .loading-step--completed {
   border-color: rgba(var(--accent-rgb), 0.3);
+  box-shadow: 0 0 12px -4px rgba(var(--accent-rgb), 0.15);
 }
 
 .loading-step--error {
@@ -1206,9 +1273,27 @@ body {
 }
 
 @keyframes loading-spin {
-  to {
-    transform: rotate(360deg);
-  }
+  to { transform: rotate(360deg); }
+}
+
+/* Checkmark draw animation */
+.loading-checkmark {
+  animation: loading-check-draw 0.35s ease-out both;
+}
+
+.loading-checkmark polyline {
+  stroke-dasharray: 28;
+  stroke-dashoffset: 28;
+  animation: loading-check-stroke 0.35s ease-out 0.05s forwards;
+}
+
+@keyframes loading-check-draw {
+  from { opacity: 0; transform: scale(0.5); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+@keyframes loading-check-stroke {
+  to { stroke-dashoffset: 0; }
 }
 
 .loading-dot {
@@ -1216,6 +1301,7 @@ body {
   height: 8px;
   border-radius: 50%;
   background: var(--border);
+  transition: background 0.3s;
 }
 
 .loading-step-content {
@@ -1229,6 +1315,7 @@ body {
   font-size: 0.8125rem;
   font-weight: 500;
   color: var(--text-primary);
+  transition: color 0.3s;
 }
 
 .loading-step--pending .loading-step-label {
@@ -1264,4 +1351,24 @@ body {
 
 .loading-step-retry:hover {
   background: rgba(239, 68, 68, 0.25);
+}
+
+/* ---- Progress bar ---- */
+
+.loading-progress {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: rgba(var(--accent-rgb), 0.1);
+  overflow: hidden;
+}
+
+.loading-progress-fill {
+  height: 100%;
+  background: var(--accent);
+  transform-origin: left;
+  transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 0 8px rgba(var(--accent-rgb), 0.4);
 }
