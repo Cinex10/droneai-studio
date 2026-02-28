@@ -6,7 +6,7 @@ import ChatPanel from "./components/ChatPanel";
 import DroneViewport from "./components/DroneViewport";
 import { TimelinePanel } from "./components/Timeline";
 import { useShowInfo } from "./hooks/useShowInfo";
-
+import LoadingScreen from "./components/LoadingScreen";
 import ProjectPicker from "./components/ProjectPicker";
 import CloseDialog from "./components/CloseDialog";
 import ViewportLoader from "./components/ViewportLoader";
@@ -41,7 +41,6 @@ function App() {
   const [pendingAction, setPendingAction] = useState<
     "close" | "back" | null
   >(null);
-  // @ts-expect-error — temporarily unused until LoadingScreen is wired in Task 3
   const [isExistingProject, setIsExistingProject] = useState(false);
   const [isRestoring, setIsRestoring] = useState(false);
   const suppressStreamRef = useRef(false);
@@ -415,7 +414,49 @@ function App() {
   }
 
   if (screen === "loading") {
-    return <div>Loading...</div>;
+    return (
+      <>
+        <LoadingScreen
+          onReady={async () => {
+            if (isExistingProject) {
+              try {
+                suppressStreamRef.current = true;
+                const chatForRestore: ProjectChatMessage[] = messages.map((m) => ({
+                  id: m.id,
+                  role: m.role,
+                  content: m.content,
+                  timestamp: m.timestamp,
+                }));
+                await invoke("restore_chat", { messages: chatForRestore });
+                setTimeout(() => { suppressStreamRef.current = false; }, 15000);
+              } catch (e) {
+                console.error("[App] Failed to restore chat:", e);
+                suppressStreamRef.current = false;
+              }
+            } else {
+              clearScene();
+              clearShowInfo();
+            }
+            setIsRestoring(isExistingProject);
+            setScreen("workspace");
+            let attempts = 0;
+            const poll = setInterval(async () => {
+              attempts++;
+              await refreshScene();
+              await refreshShowInfo();
+              if (attempts >= 5) clearInterval(poll);
+            }, 2000);
+          }}
+        />
+        {showCloseDialog && (
+          <CloseDialog
+            onSave={handleCloseSave}
+            onDiscard={handleCloseDiscard}
+            onCancel={handleCloseCancel}
+          />
+        )}
+      </>
+    );
   }
 
   const effectiveChatWidth = chatOpen ? chatWidth : 0;
