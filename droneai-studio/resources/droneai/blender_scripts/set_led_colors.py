@@ -1,5 +1,6 @@
 """Set LED colors on drones at specific frames.
 
+Execute in Blender via MCP execute_blender_code.
 Keyframes the emission color on drone materials.
 """
 import bpy
@@ -104,3 +105,8 @@ def _set_drone_color(drone, color, frame):
             node.inputs["Color"].default_value = (color[0], color[1], color[2], 1.0)
             node.inputs["Color"].keyframe_insert(data_path="default_value", frame=frame)
             break
+
+
+# Execute
+# set_led_color_all(color=(1.0, 0.0, 0.0), frame=0)  # all red at frame 0
+# set_led_gradient(color_start=(1.0, 0.0, 0.0), color_end=(0.0, 0.0, 1.0), frame=48, axis="x")

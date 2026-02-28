@@ -23,7 +23,6 @@ from droneai.engine.safety.base import SafetyParams, SafetyResult, ShowTimeline,
 from droneai.engine.safety.standard import StandardValidator
 
 try:
-    from scipy.optimize import linear_sum_assignment  # noqa: F401
     from droneai.engine.transitions.hungarian import HungarianPlanner
     _default_planner = HungarianPlanner
 except ImportError:

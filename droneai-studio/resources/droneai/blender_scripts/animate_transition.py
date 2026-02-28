@@ -1,6 +1,7 @@
 """Animate smooth transitions between formations.
 
-Sets interpolation mode on drone F-curves between keyframed formations.
+Execute in Blender via MCP execute_blender_code.
+Interpolates drone positions between two keyframed formations.
 """
 import bpy
 
@@ -8,6 +9,7 @@ import bpy
 def animate_transition(frame_start, frame_end, easing="EASE_IN_OUT"):
     """Ensure smooth transitions between keyframed positions.
 
+    Sets interpolation mode on all drone F-curves between two frames.
     Drones should already have keyframes at frame_start and frame_end
     (set by create_formation).
 
@@ -52,3 +54,7 @@ def animate_transition(frame_start, frame_end, easing="EASE_IN_OUT"):
         count += 1
 
     print(f"Transition set: frames {frame_start}-{frame_end}, {easing} for {count} drones")
+
+
+# Execute
+# animate_transition(frame_start=0, frame_end=48, easing="EASE_IN_OUT")

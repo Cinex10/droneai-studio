@@ -2,10 +2,7 @@
 import math
 from typing import List, Tuple
 
-try:
-    from scipy.optimize import linear_sum_assignment
-except ImportError:
-    linear_sum_assignment = None
+from scipy.optimize import linear_sum_assignment
 
 from droneai.engine.transitions.base import TransitionPlanner, Position
 
@@ -19,11 +16,6 @@ class HungarianPlanner(TransitionPlanner):
     """
 
     def plan(self, source: List[Position], target: List[Position]) -> List[int]:
-        if linear_sum_assignment is None:
-            raise ImportError(
-                "scipy is required for HungarianPlanner. "
-                "Use LinearPlanner as a fallback."
-            )
         if len(source) != len(target):
             raise ValueError(
                 f"Source ({len(source)}) and target ({len(target)}) must have same count"
