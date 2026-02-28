@@ -39,7 +39,7 @@ export function useClaude(): UseClaude {
   const [currentTool, setCurrentTool] = useState("");
   const lastTextRef = useRef("");
 
-  // Poll Claude status to stay in sync (SetupScreen calls invoke directly)
+  // Poll Claude status to stay in sync (LoadingScreen calls invoke directly)
   useEffect(() => {
     const check = async () => {
       try {
