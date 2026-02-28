@@ -44,6 +44,7 @@ export default function ControlsBar({
   };
 
   const layerKeys: { key: keyof TimelineLayerVisibility; label: string }[] = [
+    { key: "preview", label: "V" },
     { key: "formations", label: "F" },
     { key: "color", label: "C" },
   ];

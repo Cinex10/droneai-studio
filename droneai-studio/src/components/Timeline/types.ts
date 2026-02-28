@@ -56,6 +56,7 @@ export interface ShowInfo {
 export interface TimelineLayerVisibility {
   minimap: boolean;
   droneCount: boolean;
+  preview: boolean;
   formations: boolean;
   color: boolean;
   safety: boolean;

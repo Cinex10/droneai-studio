@@ -34,6 +34,7 @@ export default function TimelinePanel({
   const [layers, setLayers] = useState<TimelineLayerVisibility>({
     minimap: true,
     droneCount: true,
+    preview: true,
     formations: true,
     color: true,
     safety: true,
