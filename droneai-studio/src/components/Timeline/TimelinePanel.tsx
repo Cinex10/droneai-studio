@@ -5,6 +5,7 @@ import type { ShowInfo, TimelineLayerVisibility } from "./types";
 import Ruler from "./Ruler";
 import FormationTrack from "./FormationTrack";
 import ColorTrack from "./ColorTrack";
+import FormationPreviewTrack from "./FormationPreviewTrack";
 import ControlsBar from "./ControlsBar";
 
 interface TimelinePanelProps {
@@ -179,6 +180,13 @@ export default function TimelinePanel({
         <div className="tl-gutter" style={{ width: GUTTER_WIDTH }}>
           {/* Ruler spacer */}
           <div className="tl-gutter-spacer" />
+          {/* Preview label */}
+          {layers.preview && entries.length > 0 && (
+            <div className="tl-gutter-label tl-gutter-label-preview">
+              <span className="tl-gutter-icon">⊡</span>
+              <span className="tl-gutter-text">Preview</span>
+            </div>
+          )}
           {/* Formation label — must match .tl-track flex sizing */}
           {layers.formations && entries.length > 0 && (
             <div className="tl-gutter-label tl-gutter-label-form">
@@ -206,6 +214,18 @@ export default function TimelinePanel({
             scrollOffset={scrollOffset}
             onSeek={handleSeek}
           />
+
+          {/* Formation preview track */}
+          {layers.preview && entries.length > 0 && sceneData && (
+            <FormationPreviewTrack
+              entries={entries}
+              sceneData={sceneData}
+              totalFrames={totalFrames}
+              fps={fps}
+              zoom={zoom}
+              scrollOffset={scrollOffset}
+            />
+          )}
 
           {/* Formation track */}
           {layers.formations && entries.length > 0 && (
