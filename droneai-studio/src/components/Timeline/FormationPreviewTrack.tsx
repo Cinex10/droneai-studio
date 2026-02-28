@@ -13,8 +13,8 @@ interface FormationPreviewTrackProps {
   scrollOffset: number;
 }
 
-const THUMB_W = 64;
-const THUMB_H = 48;
+const THUMB_W = 128;
+const THUMB_H = 96;
 
 /** Render a single formation thumbnail using offscreen Three.js */
 function renderThumbnail(
@@ -48,15 +48,6 @@ function renderThumbnail(
     return renderer.domElement.toDataURL("image/png");
   }
 
-  // Add spheres
-  const geo = new THREE.SphereGeometry(0.15, 8, 8);
-  for (let i = 0; i < positions.length; i++) {
-    const mat = new THREE.MeshBasicMaterial({ color: colors[i] });
-    const mesh = new THREE.Mesh(geo, mat);
-    mesh.position.copy(positions[i]);
-    scene.add(mesh);
-  }
-
   // Compute bounding box in XY (front view)
   let minX = Infinity, maxX = -Infinity;
   let minY = Infinity, maxY = -Infinity;
@@ -65,6 +56,17 @@ function renderThumbnail(
     if (p.x > maxX) maxX = p.x;
     if (p.y < minY) minY = p.y;
     if (p.y > maxY) maxY = p.y;
+  }
+
+  // Add spheres — scale radius relative to formation spread so they're always visible
+  const spread = Math.max(maxX - minX, maxY - minY, 1);
+  const radius = Math.max(spread * 0.035, 0.3);
+  const geo = new THREE.SphereGeometry(radius, 8, 8);
+  for (let i = 0; i < positions.length; i++) {
+    const mat = new THREE.MeshBasicMaterial({ color: colors[i] });
+    const mesh = new THREE.Mesh(geo, mat);
+    mesh.position.copy(positions[i]);
+    scene.add(mesh);
   }
 
   // Add padding
