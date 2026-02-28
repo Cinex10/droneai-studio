@@ -279,7 +279,9 @@ function App() {
       if (data.chat && data.chat.length > 0) {
         setMessages(
           data.chat.map((m) => ({
-            id: m.id,
+            // Strip "stream-" prefix so restored messages aren't treated as
+            // in-progress streams and overwritten by new streamed responses
+            id: m.id.startsWith("stream-") ? `saved-${m.id}` : m.id,
             role: m.role as "user" | "assistant",
             content: m.content,
             timestamp: m.timestamp,
