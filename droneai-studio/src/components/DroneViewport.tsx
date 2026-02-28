@@ -3,6 +3,7 @@ import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { OrbitControls, Grid, GizmoHelper, GizmoViewport } from "@react-three/drei";
 import * as THREE from "three";
 import type { SceneData, DroneData } from "../types/scene";
+import { interpolateKeyframes } from "../utils/interpolate";
 
 interface DroneViewportProps {
   sceneData: SceneData | null;
@@ -41,27 +42,6 @@ class ViewportErrorBoundary extends Component<
   }
 }
 
-/** Interpolate drone position/color at a given frame from keyframes */
-function interpolateKeyframes(
-  keyframes: { frame: number; value: number[] }[],
-  frame: number,
-  fallback: number[]
-): number[] {
-  if (keyframes.length === 0) return fallback;
-  if (frame <= keyframes[0].frame) return keyframes[0].value;
-  if (frame >= keyframes[keyframes.length - 1].frame)
-    return keyframes[keyframes.length - 1].value;
-
-  for (let i = 0; i < keyframes.length - 1; i++) {
-    const a = keyframes[i];
-    const b = keyframes[i + 1];
-    if (frame >= a.frame && frame <= b.frame) {
-      const t = (frame - a.frame) / (b.frame - a.frame);
-      return a.value.map((v, j) => v + (b.value[j] - v) * t);
-    }
-  }
-  return fallback;
-}
 
 /** InstancedMesh renderer for all drones */
 function DroneSwarm({
