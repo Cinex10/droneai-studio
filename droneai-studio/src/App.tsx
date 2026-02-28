@@ -211,6 +211,8 @@ function App() {
     setCurrentFrame(0);
     setIsExistingProject(false);
     setIsRestoring(false);
+    clearScene();
+    clearShowInfo();
   };
 
   // --- Back to picker ---
@@ -261,10 +263,13 @@ function App() {
   const handleCreateProject = useCallback(
     async (name: string) => {
       await project.createProject(name);
+      setMessages([WELCOME_MESSAGE]);
+      clearScene();
+      clearShowInfo();
       setIsExistingProject(false);
       setScreen("setup");
     },
-    [project],
+    [project, clearScene, clearShowInfo],
   );
 
   const handleOpenProject = useCallback(
