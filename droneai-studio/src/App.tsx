@@ -43,6 +43,7 @@ function App() {
   >(null);
   const [isExistingProject, setIsExistingProject] = useState(false);
   const [isRestoring, setIsRestoring] = useState(false);
+  const suppressStreamRef = useRef(false);
 
   // --- Responsive sidebar state ---
   const [chatWidth, setChatWidth] = useState(CHAT_DEFAULT);
@@ -107,7 +108,7 @@ function App() {
 
   // --- Collect streamed text into messages + mark dirty ---
   useEffect(() => {
-    if (claude.streamedText) {
+    if (claude.streamedText && !suppressStreamRef.current) {
       setMessages((prev) => {
         const last = prev[prev.length - 1];
         if (last && last.role === "assistant" && last.id.startsWith("stream-")) {
@@ -305,6 +306,7 @@ function App() {
 
   // --- Chat actions ---
   const handleSelection = async (machineText: string, displayText: string) => {
+    suppressStreamRef.current = false;
     const userMsg: Message = {
       id: crypto.randomUUID(),
       role: "user",
@@ -332,6 +334,7 @@ function App() {
   };
 
   const handleSendMessage = async (text: string) => {
+    suppressStreamRef.current = false;
     const userMsg: Message = {
       id: crypto.randomUUID(),
       role: "user",
@@ -416,6 +419,8 @@ function App() {
         onReady={async () => {
           if (isExistingProject) {
             try {
+              // Suppress the "Welcome back" streamed response from appearing in chat
+              suppressStreamRef.current = true;
               const chatForRestore: ProjectChatMessage[] = messages.map((m) => ({
                 id: m.id,
                 role: m.role,
@@ -423,8 +428,11 @@ function App() {
                 timestamp: m.timestamp,
               }));
               await invoke("restore_chat", { messages: chatForRestore });
+              // Clear suppress after Claude finishes responding (give it time)
+              setTimeout(() => { suppressStreamRef.current = false; }, 15000);
             } catch (e) {
               console.error("[App] Failed to restore chat:", e);
+              suppressStreamRef.current = false;
             }
           } else {
             clearScene();
