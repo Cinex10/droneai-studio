@@ -26,7 +26,7 @@ function renderThumbnail(
 ): string {
   const frame = Math.round(entryTime * fps);
   const scene = new THREE.Scene();
-  scene.background = new THREE.Color(0x0a0a12);
+  scene.background = new THREE.Color(0x12131e);
 
   // Collect drone positions and colors at this frame
   const positions: THREE.Vector3[] = [];
@@ -123,6 +123,7 @@ export default function FormationPreviewTrack({
 }: FormationPreviewTrackProps) {
   const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
   const [thumbnails, setThumbnails] = useState<Map<number, string>>(new Map());
+  const [glowColors, setGlowColors] = useState<Map<number, string>>(new Map());
   const lastSpecRef = useRef<string>("");
 
   const totalSeconds = totalFrames / fps;
@@ -148,6 +149,7 @@ export default function FormationPreviewTrack({
     }
 
     const newThumbs = new Map<number, string>();
+    const newGlows = new Map<number, string>();
     for (let i = 0; i < entries.length; i++) {
       const url = renderThumbnail(
         rendererRef.current,
@@ -157,8 +159,17 @@ export default function FormationPreviewTrack({
         entries[i].color
       );
       newThumbs.set(i, url);
+
+      // Extract dominant LED color for glow
+      const c = entries[i].color;
+      const rgb = c.value ?? c.start ?? [0.4, 0.4, 1.0];
+      const r = Math.round(rgb[0] * 255);
+      const g = Math.round(rgb[1] * 255);
+      const b = Math.round(rgb[2] * 255);
+      newGlows.set(i, `${r}, ${g}, ${b}`);
     }
     setThumbnails(newThumbs);
+    setGlowColors(newGlows);
   }, [sceneData, entries, fps]);
 
   useEffect(() => {
@@ -185,6 +196,7 @@ export default function FormationPreviewTrack({
         const formWidth = timeToPct(formEnd) - formLeft;
         const shapeName = entry.formation.shape || entry.formation.type;
         const thumbUrl = thumbnails.get(i);
+        const glowRgb = glowColors.get(i);
 
         return (
           <div
@@ -193,6 +205,7 @@ export default function FormationPreviewTrack({
             style={{
               left: `${formLeft}%`,
               width: `${formWidth}%`,
+              ...(glowRgb ? { "--glow-rgb": glowRgb } as React.CSSProperties : {}),
             }}
           >
             {/* Thumbnail image */}
