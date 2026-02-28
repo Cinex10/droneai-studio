@@ -6,7 +6,7 @@ import ChatPanel from "./components/ChatPanel";
 import DroneViewport from "./components/DroneViewport";
 import { TimelinePanel } from "./components/Timeline";
 import { useShowInfo } from "./hooks/useShowInfo";
-import SetupScreen from "./components/SetupScreen";
+
 import ProjectPicker from "./components/ProjectPicker";
 import CloseDialog from "./components/CloseDialog";
 import ViewportLoader from "./components/ViewportLoader";
@@ -17,7 +17,7 @@ import { useProject } from "./hooks/useProject";
 import type { ProjectChatMessage } from "./hooks/useProject";
 import { useTheme } from "./hooks/useTheme";
 
-type Screen = "picker" | "setup" | "workspace";
+type Screen = "picker" | "loading" | "workspace";
 
 const WELCOME_MESSAGE: Message = {
   id: "welcome",
@@ -41,6 +41,7 @@ function App() {
   const [pendingAction, setPendingAction] = useState<
     "close" | "back" | null
   >(null);
+  // @ts-expect-error — temporarily unused until LoadingScreen is wired in Task 3
   const [isExistingProject, setIsExistingProject] = useState(false);
   const [isRestoring, setIsRestoring] = useState(false);
   const suppressStreamRef = useRef(false);
@@ -268,7 +269,7 @@ function App() {
       clearScene();
       clearShowInfo();
       setIsExistingProject(false);
-      setScreen("setup");
+      setScreen("loading");
     },
     [project, clearScene, clearShowInfo],
   );
@@ -292,7 +293,7 @@ function App() {
         setMessages([WELCOME_MESSAGE]);
       }
       setIsExistingProject(data.chat.length > 0);
-      setScreen("setup");
+      setScreen("loading");
     },
     [project],
   );
@@ -413,43 +414,8 @@ function App() {
     );
   }
 
-  if (screen === "setup") {
-    return (
-      <SetupScreen
-        onReady={async () => {
-          if (isExistingProject) {
-            try {
-              // Suppress the "Welcome back" streamed response from appearing in chat
-              suppressStreamRef.current = true;
-              const chatForRestore: ProjectChatMessage[] = messages.map((m) => ({
-                id: m.id,
-                role: m.role,
-                content: m.content,
-                timestamp: m.timestamp,
-              }));
-              await invoke("restore_chat", { messages: chatForRestore });
-              // Clear suppress after Claude finishes responding (give it time)
-              setTimeout(() => { suppressStreamRef.current = false; }, 15000);
-            } catch (e) {
-              console.error("[App] Failed to restore chat:", e);
-              suppressStreamRef.current = false;
-            }
-          } else {
-            clearScene();
-            clearShowInfo();
-          }
-          setIsRestoring(isExistingProject);
-          setScreen("workspace");
-          let attempts = 0;
-          const poll = setInterval(async () => {
-            attempts++;
-            await refreshScene();
-            await refreshShowInfo();
-            if (attempts >= 5) clearInterval(poll);
-          }, 2000);
-        }}
-      />
-    );
+  if (screen === "loading") {
+    return <div>Loading...</div>;
   }
 
   const effectiveChatWidth = chatOpen ? chatWidth : 0;
