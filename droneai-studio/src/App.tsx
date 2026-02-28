@@ -590,7 +590,7 @@ function App() {
             <>
               {!claude.isActive && (
                 <div className="px-3 py-1.5 bg-red-900/40 text-red-300 text-[11px] flex items-center justify-between flex-shrink-0">
-                  <span>Claude disconnected</span>
+                  <span>AI disconnected</span>
                   <button
                     onClick={handleReconnect}
                     className="px-2 py-0.5 bg-red-800/60 rounded text-[10px] hover:bg-red-700/60"
